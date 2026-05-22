@@ -31,6 +31,11 @@ type PulseRow = {
   reward_points: number;
 };
 
+// Helper function to get translation with fallback
+function getTranslation(translations: { fr: string; en: string }, lang: string): string {
+  return (translations as any)[lang] || translations.en || translations.fr;
+}
+
 function normalize(p: any): PulseRow {
   const questions: PulseQuestion[] = Array.isArray(p.questions) && p.questions.length
     ? p.questions
@@ -103,17 +108,17 @@ function PulsePage() {
             <Card key={p.id} className="p-6 border-border/50 flex flex-col gap-4">
               <div className="flex items-start justify-between gap-3">
                 <Badge variant="outline" className="text-[10px]">
-                  {lang === "fr" ? p.topic_fr : p.topic_en}
+                  {getTranslation({ fr: p.topic_fr, en: p.topic_en }, lang)}
                 </Badge>
                 <Badge className="bg-accent/15 text-accent border-accent/30 gap-1">
                   <Award className="h-3 w-3" /> +{p.reward_points} {t("pulse_points")}
                 </Badge>
               </div>
               <h3 className="font-semibold text-lg leading-snug">
-                {lang === "fr" ? p.topic_fr : p.topic_en}
+                {getTranslation({ fr: p.topic_fr, en: p.topic_en }, lang)}
               </h3>
               <p className="text-sm text-muted-foreground line-clamp-2">
-                {lang === "fr" ? p.question_fr : p.question_en}
+                {getTranslation({ fr: p.question_fr, en: p.question_en }, lang)}
               </p>
               <div className="text-xs text-muted-foreground">
                 {total} {t("pulse_questions")}
@@ -245,7 +250,7 @@ function SurveyRunner({
       <Card className="p-6 border-border/50 space-y-5">
         <div className="flex items-center justify-between">
           <Badge variant="outline" className="text-[10px]">
-            {lang === "fr" ? pulse.topic_fr : pulse.topic_en}
+            {getTranslation({ fr: pulse.topic_fr, en: pulse.topic_en }, lang)}
           </Badge>
           <Badge className="bg-accent/15 text-accent border-accent/30 gap-1">
             <Award className="h-3 w-3" /> +{pulse.reward_points}
@@ -259,7 +264,7 @@ function SurveyRunner({
           <Progress value={progress} className="h-2" />
         </div>
         <h3 className="text-lg font-semibold leading-snug">
-          {lang === "fr" ? q.prompt_fr : q.prompt_en}
+          {getTranslation({ fr: q.prompt_fr, en: q.prompt_en }, lang)}
         </h3>
         <div className="space-y-2">
           {q.options.map((o) => {
@@ -272,7 +277,7 @@ function SurveyRunner({
                   selected ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"
                 }`}
               >
-                {o.label[lang]}
+                {getTranslation(o.label, lang)}
               </button>
             );
           })}

@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthProvider";
 import { toast } from "sonner";
 import { Logo } from "@/components/asuka/Logo";
 import { LanguageSwitcher } from "@/components/asuka/LanguageSwitcher";
+import { CountryPhoneSelector, type Country } from "@/components/asuka/CountryPhoneSelector";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -31,6 +32,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   const [busy, setBusy] = useState(false);
   const [signinError, setSigninError] = useState<string | null>(null);
 
@@ -54,7 +56,12 @@ function AuthPage() {
     setSigninError(null);
     try {
       if (mode === "signup") {
-        await signup(email, password, fullName, phone);
+        // Construire le numéro de téléphone complet avec le code pays
+        const fullPhone = selectedCountry && phone 
+          ? `${selectedCountry.dialCode}${phone.replace(/\s+/g, '')}`
+          : phone;
+        
+        await signup(email, password, fullName, fullPhone);
         // Après signup réussi, l'utilisateur verra un message pour vérifier son email
         nav({ to: "/auth/check-email?email=" + encodeURIComponent(email) });
       } else if (mode === "signin") {
@@ -102,14 +109,13 @@ function AuthPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="phone">{t("auth_phone") || "Numéro de téléphone"}</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+226 XX XX XX XX"
-                    className="mt-1"
+                  <CountryPhoneSelector
+                    selectedCountry={selectedCountry}
+                    phone={phone}
+                    onCountryChange={setSelectedCountry}
+                    onPhoneChange={setPhone}
+                    label={t("auth_phone") || "Numéro de téléphone"}
+                    placeholder="XX XX XX XX"
                   />
                   <p className="text-xs text-muted-foreground mt-1">{t("auth_phone_hint") || "Optionnel"}</p>
                 </div>
@@ -169,6 +175,7 @@ function AuthPage() {
                 setPassword(""); 
                 setFullName(""); 
                 setPhone(""); 
+                setSelectedCountry(null);
                 setSigninError(null); 
               }}
               className="mt-5 text-sm text-muted-foreground hover:text-foreground w-full text-center"

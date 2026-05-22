@@ -35,8 +35,8 @@ export async function apiCall<T = any>(
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  // Add content-type for JSON by default
-  if (options.body && !headers.has("Content-Type")) {
+  // Add content-type for JSON by default (skip for FormData — browser sets multipart boundary)
+  if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -117,6 +117,11 @@ export const profileAPI = {
       method: "POST",
       body: JSON.stringify(education),
     }),
+  updateEducation: (userId: string, educationId: string, education: any) =>
+    apiCall(`/api/profile/${userId}/education/${educationId}`, {
+      method: "PUT",
+      body: JSON.stringify(education),
+    }),
   deleteEducation: (userId: string, educationId: string) =>
     apiCall(`/api/profile/${userId}/education/${educationId}`, {
       method: "DELETE",
@@ -128,6 +133,11 @@ export const profileAPI = {
   addSkill: (userId: string, skill: any) =>
     apiCall(`/api/profile/${userId}/skills`, {
       method: "POST",
+      body: JSON.stringify(skill),
+    }),
+  updateSkill: (userId: string, skillId: string, skill: any) =>
+    apiCall(`/api/profile/${userId}/skills/${skillId}`, {
+      method: "PUT",
       body: JSON.stringify(skill),
     }),
   deleteSkill: (userId: string, skillId: string) =>
@@ -142,8 +152,11 @@ export const profileAPI = {
     apiCall(`/api/profile/${userId}/certifications`, {
       method: "POST",
       body: JSON.stringify(certification),
-    }),
-  deleteCertification: (userId: string, certId: string) =>
+    }),  updateCertification: (userId: string, certificationId: string, certification: any) =>
+    apiCall(`/api/profile/${userId}/certifications/${certificationId}`, {
+      method: "PUT",
+      body: JSON.stringify(certification),
+    }),  deleteCertification: (userId: string, certId: string) =>
     apiCall(`/api/profile/${userId}/certifications/${certId}`, {
       method: "DELETE",
     }),
@@ -151,11 +164,44 @@ export const profileAPI = {
   // Experiences
   getExperiences: (userId: string) =>
     apiCall(`/api/profile/${userId}/experiences`),
-  addExperience: (userId: string, experience: any) =>
-    apiCall(`/api/profile/${userId}/experiences`, {
+  addExperience: (userId: string, experience: any) => {
+    // Normalize and format dates to ISO format with T and Z for backend validation
+    const normalized = {
+      title: experience.title ?? experience.role,
+      company: experience.company ?? experience.organization,
+      startDate: experience.startDate ? `${experience.startDate}T00:00:00Z` : null,
+      endDate: experience.endDate ? `${experience.endDate}T00:00:00Z` : null,
+      currentlyWorking: experience.currentlyWorking ?? experience.isCurrent ?? false,
+      description: experience.description || null,
+      location: experience.location ?? experience.sector ?? null,
+      kind: experience.kind ?? experience.type ?? null,
+      impact: experience.impact || null,
+      teamSize: experience.teamSize ?? experience.team_size ?? null,
+    };
+    console.log("Payload envoyé à /experiences:", JSON.stringify(normalized, null, 2));
+    return apiCall(`/api/profile/${userId}/experiences`, {
       method: "POST",
-      body: JSON.stringify(experience),
-    }),
+      body: JSON.stringify(normalized),
+    });
+  },
+  updateExperience: (userId: string, experienceId: string, experience: any) => {
+    const normalized = {
+      title: experience.title ?? experience.role,
+      company: experience.company ?? experience.organization,
+      kind: experience.kind ?? experience.type ?? "job",
+      startDate: experience.startDate ? experience.startDate.split("T")[0] : null,
+      endDate: experience.endDate ? experience.endDate.split("T")[0] : null,
+      currentlyWorking: experience.currentlyWorking ?? experience.isCurrent ?? false,
+      description: experience.description || null,
+      impact: experience.impact || null,
+      teamSize: experience.teamSize ?? experience.team_size ?? null,
+      location: experience.location ?? experience.sector ?? null,
+    };
+    return apiCall(`/api/profile/${userId}/experiences/${experienceId}`, {
+      method: "PUT",
+      body: JSON.stringify(normalized),
+    });
+  },
   deleteExperience: (userId: string, expId: string) =>
     apiCall(`/api/profile/${userId}/experiences/${expId}`, {
       method: "DELETE",
@@ -168,11 +214,22 @@ export const profileAPI = {
     apiCall(`/api/profile/${userId}/portfolio`, {
       method: "POST",
       body: JSON.stringify(item),
-    }),
-  deletePortfolioItem: (userId: string, portId: string) =>
+    }),  updatePortfolioItem: (userId: string, itemId: string, item: any) =>
+    apiCall(`/api/profile/${userId}/portfolio/${itemId}`, {
+      method: "PUT",
+      body: JSON.stringify(item),
+    }),  deletePortfolioItem: (userId: string, portId: string) =>
     apiCall(`/api/profile/${userId}/portfolio/${portId}`, {
       method: "DELETE",
     }),
+
+  // Profile Data (Countries, Cities, Languages)
+  getCountries: () =>
+    apiCall("/api/profile/data/countries"),
+  getCities: (countryCode: string) =>
+    apiCall(`/api/profile/data/cities/${countryCode}`),
+  getLanguages: () =>
+    apiCall("/api/profile/data/languages"),
 };
 
 /**
@@ -393,6 +450,20 @@ export const coachAPI = {
   callCoach: async (messages: any[], language: string = "en", profile: any = {}) => {
     const token = getAuthToken();
     const url = new URL("/api/coach", API_BASE);
+
+    return fetch(url.toString(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: JSON.stringify({ messages, language, profile }),
+    });
+  },
+
+  streamCoach: async (messages: any[], language: string = "en", profile: any = {}) => {
+    const token = getAuthToken();
+    const url = new URL("/api/coach/stream", API_BASE);
 
     return fetch(url.toString(), {
       method: "POST",

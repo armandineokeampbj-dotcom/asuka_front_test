@@ -35,11 +35,12 @@ export function NotificationsBell() {
   };
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) return;
+    
+    // Load notifications ONCE on mount
     load();
-    // Polling every 10 seconds for new notifications
-    const interval = setInterval(() => load(), 10000);
-    return () => clearInterval(interval);
+    
+    // No polling - notifications are loaded once and updated when user performs actions
   }, [user?.id]);
 
   const unread = items.filter((n) => !n.read_at).length;

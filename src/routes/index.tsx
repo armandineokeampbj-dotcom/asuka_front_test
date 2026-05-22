@@ -4,6 +4,10 @@ import { useLang } from "@/i18n/LanguageProvider";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Sparkles, Briefcase, Radio, UserCircle2, ArrowRight, Star, Zap } from "lucide-react";
+import { useAuth } from "@/context/AuthProvider";
+import { useEffect, useState } from "react";
+import { profileAPI } from "@/lib/api-client";
+import { generateAICoachContent, type UserProfile } from "@/lib/asuka-actions";
 import heroIllustration from "@/assets/hero-illustration.png";
 
 export const Route = createFileRoute("/")({
@@ -18,6 +22,35 @@ export const Route = createFileRoute("/")({
 
 function Landing() {
   const { t, lang } = useLang();
+  const { user } = useAuth();
+  const [aiCoachContent, setAiCoachContent] = useState<{ advice: string; recommendation: string; scoreTarget: number }>({
+    advice: "",
+    recommendation: "",
+    scoreTarget: 86,
+  });
+
+  // Fetch user profile and generate personalized AI Coach content
+  useEffect(() => {
+    const loadAICoachContent = async () => {
+      try {
+        if (user) {
+          const profile = await profileAPI.getProfile(user.id);
+          const content = generateAICoachContent(profile as Partial<UserProfile>, lang as "en" | "fr");
+          setAiCoachContent(content);
+        } else {
+          // Use default content for non-authenticated users
+          const content = generateAICoachContent(null, lang as "en" | "fr");
+          setAiCoachContent(content);
+        }
+      } catch (error) {
+        // Fallback to default content
+        const content = generateAICoachContent(null, lang as "en" | "fr");
+        setAiCoachContent(content);
+      }
+    };
+
+    loadAICoachContent();
+  }, [user, lang]);
   return (
     <div className="relative min-h-screen overflow-hidden">
       <div className="pointer-events-none absolute inset-0 bg-gradient-aurora" />
@@ -61,10 +94,10 @@ function Landing() {
         {/* Metrics */}
         <div className="mt-16 grid grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
           {[
-            { v: "120K+", l: t("metric_youth") },
-            { v: "4.5K+", l: t("metric_opps") },
-            { v: "32", l: t("metric_countries") },
-            { v: "87%", l: t("metric_match") },
+            { v: "1K+", l: t("metric_youth") },
+            { v: "50+", l: t("metric_opps") },
+            { v: "3", l: t("metric_countries") },
+            { v: "86%", l: t("metric_match") },
           ].map((m) => (
             <Card key={m.l} className="p-4 glass border-border/50 text-center">
               <div className="text-2xl sm:text-3xl font-bold text-gradient">{m.v}</div>
@@ -114,9 +147,7 @@ function Landing() {
                 <Zap className="h-3.5 w-3.5" /> AI Coach
               </div>
               <p className="text-xl sm:text-2xl font-semibold leading-snug">
-                {lang === "fr"
-                  ? "« D'après ton profil, postule à 3 opportunités cette semaine et complète ta certification IA pour passer à un score d'employabilité de 86. »"
-                  : "“Based on your profile, apply to 3 opportunities this week and finish your AI certification to push your employability score to 86.”"}
+                « {aiCoachContent.advice} {aiCoachContent.recommendation} {t("metric_match")} {aiCoachContent.scoreTarget}%. »
               </p>
               <div className="mt-4 flex gap-1">
                 {[1,2,3,4,5].map(i => <Star key={i} className="h-4 w-4 fill-accent text-accent" />)}

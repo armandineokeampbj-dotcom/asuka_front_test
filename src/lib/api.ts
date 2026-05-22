@@ -46,7 +46,38 @@ export async function callProfileAI(payload: {
   });
   if (!resp.ok) {
     const text = await resp.text();
-    throw new Error(`Profile-AI API error ${resp.status}: ${text}`);
+    let parsed: any = null;
+    let msg = text;
+    try { parsed = JSON.parse(text); msg = parsed.message || parsed.error || text; } catch {}
+    const err: any = new Error(msg);
+    err.status = resp.status;
+    err.data = parsed;
+    throw err;
+  }
+  return resp.json();
+}
+
+/** POST /api/profile-import — auto-fill profile from text or fileId */
+export async function callProfileImport(payload: {
+  text?: string;
+  fileId?: string;
+  lang?: string;
+}): Promise<{ summary: any }> {
+  const headers = await authHeaders();
+  const resp = await fetch(`${BASE}/api/profile-import`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...headers },
+    body: JSON.stringify(payload),
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    let parsed: any = null;
+    let msg = text;
+    try { parsed = JSON.parse(text); msg = parsed.message || parsed.error || text; } catch {}
+    const err: any = new Error(msg);
+    err.status = resp.status;
+    err.data = parsed;
+    throw err;
   }
   return resp.json();
 }
