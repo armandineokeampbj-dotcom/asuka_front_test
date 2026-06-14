@@ -3,15 +3,12 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import path from "path";
-import viteCompression from "vite-plugin-compression";
 
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
     tsconfigPaths(),
-    viteCompression({ algorithm: "brotliCompress" }),
-    viteCompression({ algorithm: "gzip" }),
   ],
   resolve: {
     alias: {
