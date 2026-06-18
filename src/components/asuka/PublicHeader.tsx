@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Logo } from "./Logo";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { useLang } from "@/i18n/LanguageProvider";
 import { useAuth } from "@/context/AuthProvider";
@@ -13,6 +14,7 @@ export function PublicHeader() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
         <Logo />
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           <LanguageSwitcher />
           {user ? (
             <Button asChild size="sm">

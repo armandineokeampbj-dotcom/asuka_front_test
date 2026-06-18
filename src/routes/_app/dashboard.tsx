@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -6,19 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/AuthProvider";
 import { useLang } from "@/i18n/LanguageProvider";
-import { profileAPI, opportunitiesAPI, pulsesAPI } from "@/lib/api-client";
+import { profileAPI, opportunitiesAPI, pulsesAPI, apiCall } from "@/lib/api-client";
 import { computeCompletion } from "@/lib/profile-completion";
 import { getDisplayScores } from "@/lib/score-calculator";
-import { Sparkles, Flame, Trophy, ArrowRight, Briefcase, TrendingUp } from "lucide-react";
+import { Sparkles, Flame, Trophy, ArrowRight, Briefcase, TrendingUp, UserCheck, Bookmark, CalendarClock } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/dashboard")({ component: Dashboard });
 
 function Dashboard() {
   const { user } = useAuth();
   const { t, lang } = useLang();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [profileData, setProfileData] = useState<any>(null);
   const [opps, setOpps] = useState<any[]>([]);
+  const [savedOpps, setSavedOpps] = useState<any[]>([]);
   const [pulse, setPulse] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -28,7 +31,7 @@ function Dashboard() {
     const loadData = async () => {
       try {
         const fullData = await profileAPI.getProfile(user.id);
-        if (fullData && !fullData.profile?.onboarded) {
+        if (fullData && !fullData.profile?.onboarded && !user?.adminRole) {
           window.location.replace("/onboarding");
           return;
         }
@@ -37,6 +40,10 @@ function Dashboard() {
 
         const oppData = await opportunitiesAPI.getOpportunities();
         setOpps((oppData?.opportunities || []).slice(0, 3));
+
+        apiCall("/api/opportunities/saved")
+          .then((data: any) => setSavedOpps((data?.opportunities ?? []).slice(0, 3)))
+          .catch(() => {});
 
         const pulseData = await pulsesAPI.getPulses();
         if (pulseData?.pulses && pulseData.pulses.length > 0) {
@@ -66,8 +73,8 @@ function Dashboard() {
   const level      = useMemo(() => Math.floor(xp / 500) + 1, [xp]);
   const xpInLevel  = useMemo(() => xp % 500, [xp]);
 
-  const completion = useMemo(() => {
-    if (!profileData) return 0;
+  const { score: completion, missing } = useMemo(() => {
+    if (!profileData) return { score: 0, missing: [] as string[] };
     return computeCompletion({
       profile:              profileData.profile,
       educationCount:       (profileData.education      ?? []).length,
@@ -75,7 +82,7 @@ function Dashboard() {
       skillsCount:          (profileData.skills         ?? []).length,
       certificationsCount:  (profileData.certifications ?? []).length,
       portfolioCount:       (profileData.portfolio      ?? []).length,
-    }).score;
+    });
   }, [profileData]);
 
   const scores = useMemo(() => {
@@ -97,48 +104,40 @@ function Dashboard() {
 
   const coachMessage = useMemo(() => {
     if (!profileData) {
-      return { text: lang === "fr" ? "Chargement..." : "Loading...", href: "/coach" };
+      return { text: t("loading") || "...", href: "/coach" };
     }
     if (completion < 30) {
-      return {
-        text: lang === "fr"
-          ? "Commence par compléter ton profil pour que le Coach puisse t'orienter précisément."
-          : "Start by completing your profile so the Coach can guide you precisely.",
-        href: "/profile",
-      };
+      return { text: t("dash_coach_fill_profile"), href: "/profile" };
     }
     if ((profileData.skills ?? []).length === 0) {
-      return {
-        text: lang === "fr"
-          ? "Ajoute tes compétences pour obtenir des recommandations personnalisées."
-          : "Add your skills to get personalized recommendations.",
-        href: "/profile",
-      };
+      return { text: t("dash_coach_add_skills"), href: "/profile" };
     }
     if ((profileData.experiences ?? []).length === 0) {
-      return {
-        text: lang === "fr"
-          ? "Renseigne tes expériences pour maximiser tes chances auprès des recruteurs."
-          : "Add your experiences to maximize your chances with recruiters.",
-        href: "/profile",
-      };
+      return { text: t("dash_coach_add_exp"), href: "/profile" };
     }
     const label = profile?.identity_labels?.[0];
     if (label) {
       return {
-        text: lang === "fr"
-          ? `Basé sur ton profil "${label}", le Coach peut t'aider à trouver les meilleures opportunités.`
-          : `Based on your "${label}" profile, the Coach can help you find the best opportunities.`,
+        text: t("dash_coach_label_msg").replace("{label}", label),
         href: "/coach",
       };
     }
-    return {
-      text: lang === "fr"
-        ? "Ton profil est bien rempli. Discute avec le Coach pour explorer les opportunités."
-        : "Your profile looks great. Chat with the Coach to explore opportunities.",
-      href: "/coach",
-    };
-  }, [profileData, completion, profile, lang]);
+    return { text: t("dash_coach_ready"), href: "/coach" };
+  }, [profileData, completion, profile, t]);
+
+  const SECTION_LABELS: Record<string, Record<string, string>> = {
+    basics:        { fr: "Infos de base",          en: "Basic info",        pt: "Dados básicos",       ar: "المعلومات الأساسية",    es: "Info básica",         sw: "Taarifa za msingi" },
+    personal:      { fr: "Infos personnelles",      en: "Personal info",     pt: "Dados pessoais",      ar: "المعلومات الشخصية",     es: "Info personal",       sw: "Taarifa za kibinafsi" },
+    bio:           { fr: "Bio",                     en: "Bio",               pt: "Bio",                 ar: "النبذة",               es: "Bio",                 sw: "Wasifu" },
+    languages:     { fr: "Langues",                 en: "Languages",         pt: "Idiomas",             ar: "اللغات",               es: "Idiomas",             sw: "Lugha" },
+    education:     { fr: "Formation",               en: "Education",         pt: "Formação",            ar: "التعليم",              es: "Educación",           sw: "Elimu" },
+    experience:    { fr: "Expérience",              en: "Experience",        pt: "Experiência",         ar: "الخبرة",               es: "Experiencia",         sw: "Uzoefu" },
+    skills:        { fr: "Compétences",             en: "Skills",            pt: "Competências",        ar: "المهارات",             es: "Habilidades",         sw: "Ujuzi" },
+    certifications:{ fr: "Certifications",          en: "Certifications",    pt: "Certificações",       ar: "الشهادات",             es: "Certificaciones",     sw: "Vyeti" },
+    aspirations:   { fr: "Aspirations",             en: "Aspirations",       pt: "Aspirações",          ar: "التطلعات",             es: "Aspiraciones",        sw: "Matarajio" },
+    portfolio:     { fr: "Portfolio",               en: "Portfolio",         pt: "Portfolio",           ar: "المحفظة",              es: "Portfolio",           sw: "Kazi zangu" },
+    cv:            { fr: "CV",                      en: "CV",                pt: "CV",                  ar: "السيرة الذاتية",       es: "CV",                  sw: "CV" },
+  };
 
   return (
     <div className="space-y-6">
@@ -179,7 +178,7 @@ function Dashboard() {
                 {xp.toLocaleString(lang === "fr" ? "fr-FR" : "en-US")}
               </div>
               <div className="text-[10px] text-muted-foreground mt-0.5">
-                Nv. {level} · {xpInLevel}/500 XP
+                {t("dash_level_abbr")} {level} · {xpInLevel}/500 XP
               </div>
             </Card>
           </div>
@@ -216,6 +215,26 @@ function Dashboard() {
               </div>
             ))}
           </div>
+          {missing.length > 0 && completion < 100 && (
+            <div className="mt-4 pt-4 border-t border-border/40">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
+                <UserCheck className="h-3.5 w-3.5" />
+                {t("dash_missing_sections")}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {missing.slice(0, 4).map((s) => (
+                  <Badge key={s} variant="outline" className="text-[10px] border-primary/30 text-primary/80">
+                    {SECTION_LABELS[s]?.[lang] ?? SECTION_LABELS[s]?.en ?? s}
+                  </Badge>
+                ))}
+                {missing.length > 4 && (
+                  <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                    +{missing.length - 4}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Coach */}
@@ -240,7 +259,7 @@ function Dashboard() {
           <p className="mt-3 font-medium leading-snug">
             {pulse
               ? (lang === "fr" ? pulse.question_fr : pulse.question_en)
-              : (lang === "fr" ? "Pulse arrive bientôt." : "Pulse coming soon.")}
+              : t("dash_pulse_soon")}
           </p>
           <Button asChild variant="outline" size="sm" className="mt-5">
             <Link to="/pulse">Pulse <ArrowRight className="ml-1 h-3 w-3" /></Link>
@@ -256,14 +275,12 @@ function Dashboard() {
         </div>
         {opps.length === 0 ? (
           <Card className="p-8 text-center text-sm text-muted-foreground border-dashed">
-            {lang === "fr"
-              ? "Pas encore d'opportunités — l'admin peut en publier."
-              : "No opportunities yet — admins can publish some."}
+            {t("dash_no_opportunities")}
           </Card>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {opps.map((o) => (
-              <Card key={o.id} className="p-5 border-border/50 hover:shadow-soft transition group">
+              <Card key={o._id ?? o.id} className="p-5 border-border/50 hover:shadow-soft transition group">
                 <div className="flex items-start justify-between">
                   <div className="text-3xl">{o.emoji ?? "✨"}</div>
                   <Badge variant="outline" className="text-[10px]">{o.type}</Badge>
@@ -272,8 +289,56 @@ function Dashboard() {
                   {lang === "fr" ? o.title_fr : o.title_en}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  {o.org_name}{o.location ? ` · ${o.location}` : ""}
+                  {o.organization ?? o.org_name}{o.location ? ` · ${o.location}` : ""}
                 </div>
+                <Button asChild size="sm" variant="ghost" className="mt-3 -ml-2 group-hover:text-primary">
+                  <Link to="/opportunities">
+                    <Briefcase className="h-3.5 w-3.5 mr-1" /> {t("opp_apply")}
+                  </Link>
+                </Button>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Saved opportunities */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-lg flex items-center gap-2">
+            <Bookmark className="h-4 w-4 text-primary" />
+            {t("dash_saved_opps")}
+          </h3>
+          <Link to="/opportunities" className="text-xs text-primary hover:underline">
+            {t("dash_view_all")}
+          </Link>
+        </div>
+        {savedOpps.length === 0 ? (
+          <Card className="p-8 text-center text-sm text-muted-foreground border-dashed">
+            {t("dash_no_saved_opps")}
+          </Card>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {savedOpps.map((o) => (
+              <Card key={o._id ?? o.id} className="p-5 border-border/50 hover:shadow-soft transition group">
+                <div className="flex items-start justify-between">
+                  <div className="text-3xl">{o.emoji ?? "✨"}</div>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge variant="outline" className="text-[10px]">{o.type}</Badge>
+                    <Bookmark className="h-3.5 w-3.5 fill-current text-primary" />
+                  </div>
+                </div>
+                <div className="mt-3 font-semibold leading-snug">
+                  {lang === "fr" ? o.title_fr : o.title_en}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {o.organization ?? o.org_name}{o.location ? ` · ${o.location}` : ""}
+                </div>
+                {o.deadline && (
+                  <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    <CalendarClock className="h-3 w-3" /> {o.deadline}
+                  </div>
+                )}
                 <Button asChild size="sm" variant="ghost" className="mt-3 -ml-2 group-hover:text-primary">
                   <Link to="/opportunities">
                     <Briefcase className="h-3.5 w-3.5 mr-1" /> {t("opp_apply")}

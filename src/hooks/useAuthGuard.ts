@@ -11,7 +11,7 @@ export function useAuthGuard() {
     userId: user?.id,
     userEmail: user?.email,
     userName: user?.firstName || user?.email,
-    isAdmin: user?.role === "admin",
+    isAdmin: user?.role === "admin_super" || user?.role === "admin_b" || user?.role === "collaborator_c",
   };
 }
 

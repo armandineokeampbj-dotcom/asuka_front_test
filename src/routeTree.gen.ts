@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as LoginAdminRouteImport } from './routes/login-admin'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
@@ -26,11 +28,39 @@ import { Route as AppOpportunitiesRouteImport } from './routes/_app/opportunitie
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCoachRouteImport } from './routes/_app/coach'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
+import { Route as AppAdminDashboardRouteImport } from './routes/_app/admin/dashboard'
+import { Route as AppAdminAnalyticsRouteImport } from './routes/_app/admin/analytics'
+import { Route as AppAdminUsersRouteImport } from './routes/_app/admin/users'
+import { Route as AppAdminLogsRouteImport } from './routes/_app/admin/logs'
+import { Route as AppAdminSettingsRouteImport } from './routes/_app/admin/settings'
+import { Route as AppAdminTeamRouteImport } from './routes/_app/admin/team'
+import { Route as AppAdminIndexRouteImport } from './routes/_app/admin/index'
+import { Route as AppAdminContentRouteImport } from './routes/_app/admin/content'
+import { Route as AppAdminContentOpportunitiesRouteImport } from './routes/_app/admin/content/opportunities'
+import { Route as AppAdminContentPulsesRouteImport } from './routes/_app/admin/content/pulses'
+import { Route as AppAdminContentPulsesSurveyIdRouteImport } from './routes/_app/admin/content/pulses.$surveyId'
+import { Route as AppAdminContentBadgesRouteImport } from './routes/_app/admin/content/badges'
+import { Route as AppAdminContentInstitutionsRouteImport } from './routes/_app/admin/content/institutions'
+import { Route as AppAdminContentRewardsRouteImport } from './routes/_app/admin/content/rewards'
+import { Route as AppAdminFirstLoginRouteImport } from './routes/_app/admin/first-login'
+import { Route as AppAdminFirstLoginChangePasswordRouteImport } from './routes/_app/admin/first-login/change-password'
+import { Route as AppAdminFirstLoginCompleteProfileRouteImport } from './routes/_app/admin/first-login/complete-profile'
 import { Route as AppVoiceSurveyIdRouteImport } from './routes/_app/voice.$surveyId'
+import { Route as AppOpportunitiesIdRouteImport } from './routes/_app/opportunities.$id'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginAdminRoute = LoginAdminRouteImport.update({
+  id: '/login-admin',
+  path: '/login-admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -112,17 +142,109 @@ const AppAdminRoute = AppAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminIndexRoute = AppAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminDashboardRoute = AppAdminDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminAnalyticsRoute = AppAdminAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminLogsRoute = AppAdminLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminSettingsRoute = AppAdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminTeamRoute = AppAdminTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminContentRoute = AppAdminContentRouteImport.update({
+  id: '/content',
+  path: '/content',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminFirstLoginRoute = AppAdminFirstLoginRouteImport.update({
+  id: '/first-login',
+  path: '/first-login',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminFirstLoginChangePasswordRoute = AppAdminFirstLoginChangePasswordRouteImport.update({
+  id: '/change-password',
+  path: '/change-password',
+  getParentRoute: () => AppAdminFirstLoginRoute,
+} as any)
+const AppAdminFirstLoginCompleteProfileRoute = AppAdminFirstLoginCompleteProfileRouteImport.update({
+  id: '/complete-profile',
+  path: '/complete-profile',
+  getParentRoute: () => AppAdminFirstLoginRoute,
+} as any)
+const AppAdminContentOpportunitiesRoute = AppAdminContentOpportunitiesRouteImport.update({
+  id: '/opportunities',
+  path: '/opportunities',
+  getParentRoute: () => AppAdminContentRoute,
+} as any)
+const AppAdminContentPulsesRoute = AppAdminContentPulsesRouteImport.update({
+  id: '/pulses',
+  path: '/pulses',
+  getParentRoute: () => AppAdminContentRoute,
+} as any)
+const AppAdminContentPulsesSurveyIdRoute = AppAdminContentPulsesSurveyIdRouteImport.update({
+  id: '/pulses/$surveyId',
+  path: '/pulses/$surveyId',
+  getParentRoute: () => AppAdminContentRoute,
+} as any)
+const AppAdminContentBadgesRoute = AppAdminContentBadgesRouteImport.update({
+  id: '/badges',
+  path: '/badges',
+  getParentRoute: () => AppAdminContentRoute,
+} as any)
+const AppAdminContentInstitutionsRoute = AppAdminContentInstitutionsRouteImport.update({
+  id: '/institutions',
+  path: '/institutions',
+  getParentRoute: () => AppAdminContentRoute,
+} as any)
+const AppAdminContentRewardsRoute = AppAdminContentRewardsRouteImport.update({
+  id: '/rewards',
+  path: '/rewards',
+  getParentRoute: () => AppAdminContentRoute,
+} as any)
 const AppVoiceSurveyIdRoute = AppVoiceSurveyIdRouteImport.update({
   id: '/$surveyId',
   path: '/$surveyId',
   getParentRoute: () => AppVoiceRoute,
+} as any)
+const AppOpportunitiesIdRoute = AppOpportunitiesIdRouteImport.update({
+  id: '/opportunities/$id',
+  path: '/opportunities/$id',
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
   '/onboarding': typeof OnboardingRoute
-  '/admin': typeof AppAdminRoute
+  '/login-admin': typeof LoginAdminRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/admin': typeof AppAdminRouteWithChildren
   '/coach': typeof AppCoachRoute
   '/dashboard': typeof AppDashboardRoute
   '/opportunities': typeof AppOpportunitiesRoute
@@ -136,12 +258,32 @@ export interface FileRoutesByFullPath {
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/voice/$surveyId': typeof AppVoiceSurveyIdRoute
+  '/opportunities/$id': typeof AppOpportunitiesIdRoute
+  '/admin/': typeof AppAdminIndexRoute
+  '/admin/dashboard': typeof AppAdminDashboardRoute
+  '/admin/analytics': typeof AppAdminAnalyticsRoute
+  '/admin/users': typeof AppAdminUsersRoute
+  '/admin/logs': typeof AppAdminLogsRoute
+  '/admin/settings': typeof AppAdminSettingsRoute
+  '/admin/team': typeof AppAdminTeamRoute
+  '/admin/content': typeof AppAdminContentRouteWithChildren
+  '/admin/content/opportunities': typeof AppAdminContentOpportunitiesRoute
+  '/admin/content/pulses': typeof AppAdminContentPulsesRoute
+  '/admin/content/pulses/$surveyId': typeof AppAdminContentPulsesSurveyIdRoute
+  '/admin/content/badges': typeof AppAdminContentBadgesRoute
+  '/admin/content/institutions': typeof AppAdminContentInstitutionsRoute
+  '/admin/content/rewards': typeof AppAdminContentRewardsRoute
+  '/admin/first-login': typeof AppAdminFirstLoginRouteWithChildren
+  '/admin/first-login/change-password': typeof AppAdminFirstLoginChangePasswordRoute
+  '/admin/first-login/complete-profile': typeof AppAdminFirstLoginCompleteProfileRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
   '/onboarding': typeof OnboardingRoute
-  '/admin': typeof AppAdminRoute
+  '/login-admin': typeof LoginAdminRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/admin': typeof AppAdminIndexRoute
   '/coach': typeof AppCoachRoute
   '/dashboard': typeof AppDashboardRoute
   '/opportunities': typeof AppOpportunitiesRoute
@@ -155,6 +297,22 @@ export interface FileRoutesByTo {
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/voice/$surveyId': typeof AppVoiceSurveyIdRoute
+  '/opportunities/$id': typeof AppOpportunitiesIdRoute
+  '/admin/dashboard': typeof AppAdminDashboardRoute
+  '/admin/analytics': typeof AppAdminAnalyticsRoute
+  '/admin/users': typeof AppAdminUsersRoute
+  '/admin/logs': typeof AppAdminLogsRoute
+  '/admin/settings': typeof AppAdminSettingsRoute
+  '/admin/team': typeof AppAdminTeamRoute
+  '/admin/content': typeof AppAdminContentRouteWithChildren
+  '/admin/content/opportunities': typeof AppAdminContentOpportunitiesRoute
+  '/admin/content/pulses': typeof AppAdminContentPulsesRoute
+  '/admin/content/pulses/$surveyId': typeof AppAdminContentPulsesSurveyIdRoute
+  '/admin/content/badges': typeof AppAdminContentBadgesRoute
+  '/admin/content/institutions': typeof AppAdminContentInstitutionsRoute
+  '/admin/content/rewards': typeof AppAdminContentRewardsRoute
+  '/admin/first-login/change-password': typeof AppAdminFirstLoginChangePasswordRoute
+  '/admin/first-login/complete-profile': typeof AppAdminFirstLoginCompleteProfileRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -162,7 +320,9 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
   '/onboarding': typeof OnboardingRoute
-  '/_app/admin': typeof AppAdminRoute
+  '/login-admin': typeof LoginAdminRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/_app/admin': typeof AppAdminRouteWithChildren
   '/_app/coach': typeof AppCoachRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/opportunities': typeof AppOpportunitiesRoute
@@ -176,6 +336,24 @@ export interface FileRoutesById {
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/_app/voice/$surveyId': typeof AppVoiceSurveyIdRoute
+  '/_app/opportunities/$id': typeof AppOpportunitiesIdRoute
+  '/_app/admin/': typeof AppAdminIndexRoute
+  '/_app/admin/dashboard': typeof AppAdminDashboardRoute
+  '/_app/admin/analytics': typeof AppAdminAnalyticsRoute
+  '/_app/admin/users': typeof AppAdminUsersRoute
+  '/_app/admin/logs': typeof AppAdminLogsRoute
+  '/_app/admin/settings': typeof AppAdminSettingsRoute
+  '/_app/admin/team': typeof AppAdminTeamRoute
+  '/_app/admin/content': typeof AppAdminContentRouteWithChildren
+  '/_app/admin/content/opportunities': typeof AppAdminContentOpportunitiesRoute
+  '/_app/admin/content/pulses': typeof AppAdminContentPulsesRoute
+  '/_app/admin/content/pulses/$surveyId': typeof AppAdminContentPulsesSurveyIdRoute
+  '/_app/admin/content/badges': typeof AppAdminContentBadgesRoute
+  '/_app/admin/content/institutions': typeof AppAdminContentInstitutionsRoute
+  '/_app/admin/content/rewards': typeof AppAdminContentRewardsRoute
+  '/_app/admin/first-login': typeof AppAdminFirstLoginRouteWithChildren
+  '/_app/admin/first-login/change-password': typeof AppAdminFirstLoginChangePasswordRoute
+  '/_app/admin/first-login/complete-profile': typeof AppAdminFirstLoginCompleteProfileRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -183,6 +361,8 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/onboarding'
+    | '/login-admin'
+    | '/verify-email'
     | '/admin'
     | '/coach'
     | '/dashboard'
@@ -197,11 +377,31 @@ export interface FileRouteTypes {
     | '/auth/forgot-password'
     | '/auth/reset-password'
     | '/voice/$surveyId'
+    | '/opportunities/$id'
+    | '/admin/'
+    | '/admin/dashboard'
+    | '/admin/analytics'
+    | '/admin/users'
+    | '/admin/logs'
+    | '/admin/settings'
+    | '/admin/team'
+    | '/admin/content'
+    | '/admin/content/opportunities'
+    | '/admin/content/pulses'
+    | '/admin/content/pulses/$surveyId'
+    | '/admin/content/badges'
+    | '/admin/content/institutions'
+    | '/admin/content/rewards'
+    | '/admin/first-login'
+    | '/admin/first-login/change-password'
+    | '/admin/first-login/complete-profile'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/onboarding'
+    | '/login-admin'
+    | '/verify-email'
     | '/admin'
     | '/coach'
     | '/dashboard'
@@ -216,12 +416,30 @@ export interface FileRouteTypes {
     | '/auth/forgot-password'
     | '/auth/reset-password'
     | '/voice/$surveyId'
+    | '/opportunities/$id'
+    | '/admin/dashboard'
+    | '/admin/analytics'
+    | '/admin/users'
+    | '/admin/logs'
+    | '/admin/settings'
+    | '/admin/team'
+    | '/admin/content'
+    | '/admin/content/opportunities'
+    | '/admin/content/pulses'
+    | '/admin/content/pulses/$surveyId'
+    | '/admin/content/badges'
+    | '/admin/content/institutions'
+    | '/admin/content/rewards'
+    | '/admin/first-login/change-password'
+    | '/admin/first-login/complete-profile'
   id:
     | '__root__'
     | '/'
     | '/_app'
     | '/auth'
     | '/onboarding'
+    | '/login-admin'
+    | '/verify-email'
     | '/_app/admin'
     | '/_app/coach'
     | '/_app/dashboard'
@@ -236,6 +454,24 @@ export interface FileRouteTypes {
     | '/auth/forgot-password'
     | '/auth/reset-password'
     | '/_app/voice/$surveyId'
+    | '/_app/opportunities/$id'
+    | '/_app/admin/'
+    | '/_app/admin/dashboard'
+    | '/_app/admin/analytics'
+    | '/_app/admin/users'
+    | '/_app/admin/logs'
+    | '/_app/admin/settings'
+    | '/_app/admin/team'
+    | '/_app/admin/content'
+    | '/_app/admin/content/opportunities'
+    | '/_app/admin/content/pulses'
+    | '/_app/admin/content/pulses/$surveyId'
+    | '/_app/admin/content/badges'
+    | '/_app/admin/content/institutions'
+    | '/_app/admin/content/rewards'
+    | '/_app/admin/first-login'
+    | '/_app/admin/first-login/change-password'
+    | '/_app/admin/first-login/complete-profile'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -243,6 +479,8 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
+  LoginAdminRoute: typeof LoginAdminRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -252,6 +490,20 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login-admin': {
+      id: '/login-admin'
+      path: '/login-admin'
+      fullPath: '/login-admin'
+      preLoaderRoute: typeof LoginAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -366,6 +618,125 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/admin/': {
+      id: '/_app/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AppAdminIndexRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
+    '/_app/admin/dashboard': {
+      id: '/_app/admin/dashboard'
+      path: '/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AppAdminDashboardRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
+    '/_app/admin/analytics': {
+      id: '/_app/admin/analytics'
+      path: '/analytics'
+      fullPath: '/admin/analytics'
+      preLoaderRoute: typeof AppAdminAnalyticsRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
+    '/_app/admin/users': {
+      id: '/_app/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AppAdminUsersRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
+    '/_app/admin/logs': {
+      id: '/_app/admin/logs'
+      path: '/logs'
+      fullPath: '/admin/logs'
+      preLoaderRoute: typeof AppAdminLogsRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
+    '/_app/admin/settings': {
+      id: '/_app/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AppAdminSettingsRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
+    '/_app/admin/team': {
+      id: '/_app/admin/team'
+      path: '/team'
+      fullPath: '/admin/team'
+      preLoaderRoute: typeof AppAdminTeamRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
+    '/_app/admin/content': {
+      id: '/_app/admin/content'
+      path: '/content'
+      fullPath: '/admin/content'
+      preLoaderRoute: typeof AppAdminContentRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
+    '/_app/admin/content/opportunities': {
+      id: '/_app/admin/content/opportunities'
+      path: '/opportunities'
+      fullPath: '/admin/content/opportunities'
+      preLoaderRoute: typeof AppAdminContentOpportunitiesRouteImport
+      parentRoute: typeof AppAdminContentRoute
+    }
+    '/_app/admin/content/pulses': {
+      id: '/_app/admin/content/pulses'
+      path: '/pulses'
+      fullPath: '/admin/content/pulses'
+      preLoaderRoute: typeof AppAdminContentPulsesRouteImport
+      parentRoute: typeof AppAdminContentRoute
+    }
+    '/_app/admin/content/pulses/$surveyId': {
+      id: '/_app/admin/content/pulses/$surveyId'
+      path: '/pulses/$surveyId'
+      fullPath: '/admin/content/pulses/$surveyId'
+      preLoaderRoute: typeof AppAdminContentPulsesSurveyIdRouteImport
+      parentRoute: typeof AppAdminContentRoute
+    }
+    '/_app/admin/content/badges': {
+      id: '/_app/admin/content/badges'
+      path: '/badges'
+      fullPath: '/admin/content/badges'
+      preLoaderRoute: typeof AppAdminContentBadgesRouteImport
+      parentRoute: typeof AppAdminContentRoute
+    }
+    '/_app/admin/content/institutions': {
+      id: '/_app/admin/content/institutions'
+      path: '/institutions'
+      fullPath: '/admin/content/institutions'
+      preLoaderRoute: typeof AppAdminContentInstitutionsRouteImport
+      parentRoute: typeof AppAdminContentRoute
+    }
+    '/_app/admin/content/rewards': {
+      id: '/_app/admin/content/rewards'
+      path: '/rewards'
+      fullPath: '/admin/content/rewards'
+      preLoaderRoute: typeof AppAdminContentRewardsRouteImport
+      parentRoute: typeof AppAdminContentRoute
+    }
+    '/_app/admin/first-login': {
+      id: '/_app/admin/first-login'
+      path: '/first-login'
+      fullPath: '/admin/first-login'
+      preLoaderRoute: typeof AppAdminFirstLoginRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
+    '/_app/admin/first-login/change-password': {
+      id: '/_app/admin/first-login/change-password'
+      path: '/change-password'
+      fullPath: '/admin/first-login/change-password'
+      preLoaderRoute: typeof AppAdminFirstLoginChangePasswordRouteImport
+      parentRoute: typeof AppAdminFirstLoginRoute
+    }
+    '/_app/admin/first-login/complete-profile': {
+      id: '/_app/admin/first-login/complete-profile'
+      path: '/complete-profile'
+      fullPath: '/admin/first-login/complete-profile'
+      preLoaderRoute: typeof AppAdminFirstLoginCompleteProfileRouteImport
+      parentRoute: typeof AppAdminFirstLoginRoute
+    }
     '/_app/voice/$surveyId': {
       id: '/_app/voice/$surveyId'
       path: '/$surveyId'
@@ -373,8 +744,79 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppVoiceSurveyIdRouteImport
       parentRoute: typeof AppVoiceRoute
     }
+    '/_app/opportunities/$id': {
+      id: '/_app/opportunities/$id'
+      path: '/opportunities/$id'
+      fullPath: '/opportunities/$id'
+      preLoaderRoute: typeof AppOpportunitiesIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
+
+interface AppAdminFirstLoginRouteChildren {
+  AppAdminFirstLoginChangePasswordRoute: typeof AppAdminFirstLoginChangePasswordRoute
+  AppAdminFirstLoginCompleteProfileRoute: typeof AppAdminFirstLoginCompleteProfileRoute
+}
+
+const AppAdminFirstLoginRouteChildren: AppAdminFirstLoginRouteChildren = {
+  AppAdminFirstLoginChangePasswordRoute: AppAdminFirstLoginChangePasswordRoute,
+  AppAdminFirstLoginCompleteProfileRoute: AppAdminFirstLoginCompleteProfileRoute,
+}
+
+const AppAdminFirstLoginRouteWithChildren = AppAdminFirstLoginRoute._addFileChildren(
+  AppAdminFirstLoginRouteChildren,
+)
+
+interface AppAdminContentRouteChildren {
+  AppAdminContentOpportunitiesRoute: typeof AppAdminContentOpportunitiesRoute
+  AppAdminContentPulsesRoute: typeof AppAdminContentPulsesRoute
+  AppAdminContentPulsesSurveyIdRoute: typeof AppAdminContentPulsesSurveyIdRoute
+  AppAdminContentBadgesRoute: typeof AppAdminContentBadgesRoute
+  AppAdminContentInstitutionsRoute: typeof AppAdminContentInstitutionsRoute
+  AppAdminContentRewardsRoute: typeof AppAdminContentRewardsRoute
+}
+
+const AppAdminContentRouteChildren: AppAdminContentRouteChildren = {
+  AppAdminContentOpportunitiesRoute: AppAdminContentOpportunitiesRoute,
+  AppAdminContentPulsesRoute: AppAdminContentPulsesRoute,
+  AppAdminContentPulsesSurveyIdRoute: AppAdminContentPulsesSurveyIdRoute,
+  AppAdminContentBadgesRoute: AppAdminContentBadgesRoute,
+  AppAdminContentInstitutionsRoute: AppAdminContentInstitutionsRoute,
+  AppAdminContentRewardsRoute: AppAdminContentRewardsRoute,
+}
+
+const AppAdminContentRouteWithChildren = AppAdminContentRoute._addFileChildren(
+  AppAdminContentRouteChildren,
+)
+
+interface AppAdminRouteChildren {
+  AppAdminIndexRoute: typeof AppAdminIndexRoute
+  AppAdminDashboardRoute: typeof AppAdminDashboardRoute
+  AppAdminAnalyticsRoute: typeof AppAdminAnalyticsRoute
+  AppAdminUsersRoute: typeof AppAdminUsersRoute
+  AppAdminLogsRoute: typeof AppAdminLogsRoute
+  AppAdminSettingsRoute: typeof AppAdminSettingsRoute
+  AppAdminTeamRoute: typeof AppAdminTeamRoute
+  AppAdminContentRoute: typeof AppAdminContentRouteWithChildren
+  AppAdminFirstLoginRoute: typeof AppAdminFirstLoginRouteWithChildren
+}
+
+const AppAdminRouteChildren: AppAdminRouteChildren = {
+  AppAdminIndexRoute: AppAdminIndexRoute,
+  AppAdminDashboardRoute: AppAdminDashboardRoute,
+  AppAdminAnalyticsRoute: AppAdminAnalyticsRoute,
+  AppAdminUsersRoute: AppAdminUsersRoute,
+  AppAdminLogsRoute: AppAdminLogsRoute,
+  AppAdminSettingsRoute: AppAdminSettingsRoute,
+  AppAdminTeamRoute: AppAdminTeamRoute,
+  AppAdminContentRoute: AppAdminContentRouteWithChildren,
+  AppAdminFirstLoginRoute: AppAdminFirstLoginRouteWithChildren,
+}
+
+const AppAdminRouteWithChildren = AppAdminRoute._addFileChildren(
+  AppAdminRouteChildren,
+)
 
 interface AppVoiceRouteChildren {
   AppVoiceSurveyIdRoute: typeof AppVoiceSurveyIdRoute
@@ -389,10 +831,11 @@ const AppVoiceRouteWithChildren = AppVoiceRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
-  AppAdminRoute: typeof AppAdminRoute
+  AppAdminRoute: typeof AppAdminRouteWithChildren
   AppCoachRoute: typeof AppCoachRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppOpportunitiesRoute: typeof AppOpportunitiesRoute
+  AppOpportunitiesIdRoute: typeof AppOpportunitiesIdRoute
   AppPeaceRoute: typeof AppPeaceRoute
   AppProfileRoute: typeof AppProfileRoute
   AppPulseRoute: typeof AppPulseRoute
@@ -401,10 +844,11 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppAdminRoute: AppAdminRoute,
+  AppAdminRoute: AppAdminRouteWithChildren,
   AppCoachRoute: AppCoachRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppOpportunitiesRoute: AppOpportunitiesRoute,
+  AppOpportunitiesIdRoute: AppOpportunitiesIdRoute,
   AppPeaceRoute: AppPeaceRoute,
   AppProfileRoute: AppProfileRoute,
   AppPulseRoute: AppPulseRoute,
@@ -435,6 +879,8 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
+  LoginAdminRoute: LoginAdminRoute,
+  VerifyEmailRoute: VerifyEmailRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

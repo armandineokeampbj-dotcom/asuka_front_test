@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useAuth } from "@/context/AuthProvider";
 import { useLang } from "@/i18n/LanguageProvider";
 import { callProfileAI, callProfileImport } from "@/lib/api";
-import { profileAPI, storageAPI } from "@/lib/api-client";
+import { profileAPI } from "@/lib/api-client";
 import { toast } from "sonner";
 import { computeCompletion } from "@/lib/profile-completion";
 import { getDisplayScores, calculateReadiness } from "@/lib/score-calculator";
@@ -42,10 +42,10 @@ type Exp = { id?: string; role: string; organization?: string; industry?: string
 type Skill = { id?: string; skill_id?: string; _id?: string; name: string; category: string; level: number; validations?: any };
 type Port = { id?: string; type?: string; title: string; description?: string; url?: string; imageUrl?: string; kind?: string };
 
-function scoreQuality(v: number, lang: string) {
-  if (v >= 70) return lang === "fr" ? "Solide" : "Strong";
-  if (v >= 40) return lang === "fr" ? "En progression" : "Growing";
-  return lang === "fr" ? "À développer" : "Developing";
+function scoreQuality(v: number, t: (k: string) => string) {
+  if (v >= 70) return t("score_strong");
+  if (v >= 40) return t("score_growing");
+  return t("score_developing");
 }
 
 function Ring({ value, label, quality }: { value: number; label: string; quality?: string }) {
@@ -74,6 +74,9 @@ function fmtDate(d?: string | null) {
 
 function skillLevelColor(level: number) {
   return level >= 4 ? "bg-success/15 text-success border-success/30" : level === 3 ? "bg-primary/10 text-primary border-primary/20" : level === 2 ? "bg-accent/10 text-foreground border-accent/20" : "bg-muted text-muted-foreground border-border";
+}
+function skillLevelIconClass(level: number) {
+  return level >= 4 ? "bg-success/15 text-success" : level === 3 ? "bg-primary/10 text-primary" : level === 2 ? "bg-accent/10 text-accent" : "bg-muted text-muted-foreground";
 }
 
 function ProfilePage() {
@@ -104,6 +107,7 @@ function ProfilePage() {
   const [timelinePage, setTimelinePage] = useState(1);
   const [activeTab, setActiveTab] = useState("overview");
   const [insightsHighlighted, setInsightsHighlighted] = useState(false);
+  const [insightsDialogOpen, setInsightsDialogOpen] = useState(false);
   const insightsCardRef = useRef<HTMLDivElement>(null);
   const [avatarLightbox, setAvatarLightbox] = useState(false);
   const reload = async () => {
@@ -121,7 +125,7 @@ function ProfilePage() {
       setXpEvents(data.xpEvents ?? []);
     } catch (err) {
       console.error("Profile load error:", err);
-      toast.error("Erreur lors du chargement du profil");
+      toast.error(t("prof_load_error"));
     }
   };
 
@@ -164,7 +168,7 @@ function ProfilePage() {
 
   const profileSummary = useMemo(() => {
     if (!p) return "";
-    const name = p.preferred_name || p.full_name || user?.firstName || (lang === "fr" ? "Vous" : "You");
+    const name = p.preferred_name || p.full_name || user?.firstName || t("prof_you");
     const location = [p.city, p.country].filter(Boolean).join(", ");
     const expCount = exps.length;
     const skillCount = skills.length;
@@ -190,15 +194,14 @@ function ProfilePage() {
 
   const nextSteps = useMemo(() => {
     if (!p) return [] as { label: string; tab: string }[];
-    const fr = lang === "fr";
     const steps: { label: string; tab: string }[] = [];
-    if (!p.bio?.trim()) steps.push({ label: fr ? "Ajouter une bio" : "Add a bio", tab: "personal" });
-    if (!p.dream_career) steps.push({ label: fr ? "Définir ton objectif" : "Set career goal", tab: "aspirations" });
-    if (education.length === 0) steps.push({ label: fr ? "Ajouter une formation" : "Add education", tab: "education" });
-    if (exps.length === 0) steps.push({ label: fr ? "Ajouter une expérience" : "Add experience", tab: "experience" });
-    if (skills.length === 0) steps.push({ label: fr ? "Ajouter des compétences" : "Add skills", tab: "skills" });
+    if (!p.bio?.trim()) steps.push({ label: t("prof_next_bio"), tab: "personal" });
+    if (!p.dream_career) steps.push({ label: t("prof_next_goal"), tab: "aspirations" });
+    if (education.length === 0) steps.push({ label: t("prof_next_edu"), tab: "education" });
+    if (exps.length === 0) steps.push({ label: t("prof_next_exp"), tab: "experience" });
+    if (skills.length === 0) steps.push({ label: t("prof_next_skills"), tab: "skills" });
     return steps;
-  }, [p, education.length, exps.length, skills.length, lang]);
+  }, [p, education.length, exps.length, skills.length, t]);
 
   // Extract XP data
   const level = useMemo(() => Math.floor((p?.xp ?? 0) / 500) + 1, [p?.xp]);
@@ -206,12 +209,12 @@ function ProfilePage() {
   const xpPct = useMemo(() => (xp / 500) * 100, [xp]);
   const xpInLevel = useMemo(() => Math.floor(xp), [xp]);
   const streak = useMemo(() => p?.streak ?? 0, [p?.streak]);
-  const insights = useMemo(() => p?.ai_insights ?? {}, [p?.ai_insights]);
+  const insights = useMemo(() => p?.personality_insights ?? {}, [p?.personality_insights]);
 
   // Rate limit states
   const aiInsightsNextDate = useMemo(() => {
     if (!p?.lastAiInsightsAt) return null;
-    const ms = new Date(p.lastAiInsightsAt).getTime() + 7 * 24 * 60 * 60 * 1000;
+    const ms = new Date(p.lastAiInsightsAt).getTime() + 30 * 24 * 60 * 60 * 1000;
     return ms > Date.now() ? new Date(ms) : null;
   }, [p?.lastAiInsightsAt]);
 
@@ -228,7 +231,7 @@ function ProfilePage() {
       toast.success(t("prof_saved"));
       reload();
     } catch (err: any) {
-      toast.error(err.message || "Erreur lors de la sauvegarde");
+      toast.error(err.message || t("prof_save_error"));
     }
   };
 
@@ -254,10 +257,10 @@ function ProfilePage() {
       await profileAPI.updateProfile(user.id, update);
       await awardXp(user.id, 30, "ai_profile_insights");
       await awardBadgeIfMissing(user.id, "ai_optimized_profile");
-      await notify(user.id, lang === "fr" ? "Insights IA générés" : "AI insights generated", undefined, "profile");
-      toast.success(lang === "fr" ? "Insights IA prêts ✨" : "AI insights ready ✨", {
+      await notify(user.id, t("prof_ai_success"), undefined, "profile");
+      toast.success(t("prof_ai_success"), {
         action: {
-          label: lang === "fr" ? "Voir le dashboard" : "Open dashboard",
+          label: t("prof_ai_view_dash"),
           onClick: () => navigate({ to: "/dashboard" }),
         },
       });
@@ -268,17 +271,10 @@ function ProfilePage() {
       reload();
     } catch (e: any) {
       if (e.status === 429 && e.data?.nextAvailableAt) {
-        const dateStr = new Date(e.data.nextAvailableAt).toLocaleDateString(
-          lang === "fr" ? "fr-FR" : "en-US",
-          { day: "numeric", month: "long", year: "numeric" }
-        );
-        toast.error(
-          lang === "fr"
-            ? `Tu pourras générer de nouveaux insights le ${dateStr}.`
-            : `New insights available on ${dateStr}.`
-        );
+        const dateStr = new Date(e.data.nextAvailableAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+        toast.error(`${t("prof_ai_rate_limit")} ${dateStr}.`);
       } else {
-        toast.error(e.message || "AI error");
+        toast.error(e.message || t("error_occurred"));
       }
     } finally { setAiBusy(false); }
   };
@@ -291,13 +287,13 @@ function ProfilePage() {
       const data: any = await callProfileAI({ action: "generate_cv", lang, profile: profilePayload });
       if (data?.url) {
         await awardXp(user.id, 20, "cv_generated");
-        toast.success(lang === "fr" ? "CV généré avec succès !" : "CV generated successfully!");
+        toast.success(t("prof_cv_success"));
         reload();
       } else {
-        throw new Error(lang === "fr" ? "URL manquante dans la réponse" : "Missing URL in response");
+        throw new Error(t("prof_cv_url_missing"));
       }
     } catch (e: any) {
-      toast.error(e.message || (lang === "fr" ? "Erreur lors de la génération du CV" : "CV generation error"));
+      toast.error(e.message || t("prof_cv_error"));
     } finally {
       setCvBusy(false);
     }
@@ -307,7 +303,7 @@ function ProfilePage() {
     if (!p?.cvUrl) return;
     try {
       const res = await fetch(p.cvUrl);
-      if (!res.ok) throw new Error("Erreur réseau");
+      if (!res.ok) throw new Error(t("network_error"));
       const blob = await res.blob();
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -318,7 +314,7 @@ function ProfilePage() {
       document.body.removeChild(a);
       URL.revokeObjectURL(blobUrl);
     } catch {
-      toast.error(lang === "fr" ? "Erreur lors du téléchargement" : "Download failed");
+      toast.error(t("prof_download_error"));
     }
   };
 
@@ -326,32 +322,25 @@ function ProfilePage() {
     if (!user?.id) return;
     setImportBusy(true);
     try {
-      let payload: { text?: string; fileId?: string; lang: string };
+      const formData = new FormData();
+      formData.append('lang', lang);
       if (importMode === 'file' && importFile) {
-        const uploaded = await storageAPI.uploadFile(importFile);
-        payload = { fileId: uploaded.fileId, lang };
+        formData.append('file', importFile);
       } else if (importMode === 'text' && importText.trim()) {
-        payload = { text: importText, lang };
+        formData.append('text', importText.trim());
       } else {
         return;
       }
-      const data = await callProfileImport(payload);
+      const data = await callProfileImport(formData);
       setImportSummary(data.summary);
-      toast.success(lang === 'fr' ? 'Profil mis à jour automatiquement !' : 'Profile auto-updated!');
+      toast.success(t("prof_import_success"));
       await reload();
     } catch (e: any) {
       if (e.status === 429 && e.data?.nextAvailableAt) {
-        const dateStr = new Date(e.data.nextAvailableAt).toLocaleDateString(
-          lang === "fr" ? "fr-FR" : "en-US",
-          { day: "numeric", month: "long", year: "numeric" }
-        );
-        toast.error(
-          lang === "fr"
-            ? `Tu pourras réutiliser cette fonctionnalité le ${dateStr}.`
-            : `This feature will be available again on ${dateStr}.`
-        );
+        const dateStr = new Date(e.data.nextAvailableAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+        toast.error(`${t("prof_import_rate_limit")} ${dateStr}.`);
       } else {
-        toast.error(e.message || (lang === 'fr' ? "Erreur lors de l'analyse" : 'Analysis error'));
+        toast.error(e.message || t("prof_import_error"));
       }
     } finally {
       setImportBusy(false);
@@ -388,7 +377,7 @@ function ProfilePage() {
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-accent/15 text-foreground font-semibold"><Sparkles className="h-3 w-3 text-accent" /> {xp} XP</span>
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-muted font-semibold"><Flame className="h-3 w-3 text-accent" /> {streak}d</span>
               {p.verifications && Object.values(p.verifications).some(Boolean) && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-success/15 text-success font-semibold"><ShieldCheck className="h-3 w-3" /> Verified</span>
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-success/15 text-success font-semibold"><ShieldCheck className="h-3 w-3" /> {t("prof_verified")}</span>
               )}
             </div>
             <div className="mt-2 max-w-xs"><Progress value={xpPct} className="h-1.5" /><div className="text-[10px] text-muted-foreground mt-1">{xpInLevel} / 500 XP → Lv.{level + 1}</div></div>
@@ -446,12 +435,12 @@ function ProfilePage() {
                 <User className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold mb-1">{lang === "fr" ? "Résumé du profil" : "Profile Summary"}</h3>
+                <h3 className="font-semibold mb-1">{t("prof_summary_title")}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{profileSummary}</p>
                 {nextSteps.length > 0 && (
                   <div className="mt-3">
                     <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                      {lang === "fr" ? "Prochaines étapes suggérées" : "Suggested next steps"}
+                      {t("prof_summary_steps")}
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {nextSteps.map((step) => (
@@ -469,7 +458,7 @@ function ProfilePage() {
               </div>
               <div className="text-right shrink-0">
                 <div className="text-2xl font-bold text-gradient">{completion.score}%</div>
-                <div className="text-[10px] text-muted-foreground">{lang === "fr" ? "complété" : "complete"}</div>
+                <div className="text-[10px] text-muted-foreground">{t("prof_summary_pct")}</div>
               </div>
             </div>
           </Card>
@@ -481,21 +470,15 @@ function ProfilePage() {
                 <Wand2 className="h-5 w-5 text-accent" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold mb-1">
-                  {lang === 'fr' ? 'Remplir mon profil en un clic' : 'Auto-fill my profile'}
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {lang === 'fr'
-                    ? "Importe ton CV ou colle du texte (lettre de motivation, bio LinkedIn...), l'IA remplit automatiquement les sections de ton profil."
-                    : 'Import your CV or paste text (cover letter, LinkedIn bio...), AI automatically fills your profile sections.'}
-                </p>
+                <h3 className="font-semibold mb-1">{t("prof_import_title")}</h3>
+                <p className="text-sm text-muted-foreground mb-4">{t("prof_import_desc")}</p>
 
                 {importSummary ? (
                   /* ── Result view ─────────────────────────────────────── */
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 text-success font-semibold">
                       <CheckCircle2 className="h-4 w-4" />
-                      {lang === 'fr' ? 'Profil mis à jour !' : 'Profile updated!'}
+                      {t("prof_import_updated")}
                     </div>
                     {(
                       importSummary.education_added > 0 ||
@@ -510,52 +493,48 @@ function ProfilePage() {
                         {importSummary.education_added > 0 && (
                           <li className="flex items-center gap-2 text-muted-foreground">
                             <GraduationCap className="h-3.5 w-3.5 text-primary shrink-0" />
-                            {importSummary.education_added} {lang === 'fr' ? 'formation(s) ajoutée(s)' : 'education(s) added'}
+                            {importSummary.education_added} {t("prof_import_edu")}
                           </li>
                         )}
                         {importSummary.experiences_added > 0 && (
                           <li className="flex items-center gap-2 text-muted-foreground">
                             <Briefcase className="h-3.5 w-3.5 text-accent shrink-0" />
-                            {importSummary.experiences_added} {lang === 'fr' ? 'expérience(s) ajoutée(s)' : 'experience(s) added'}
+                            {importSummary.experiences_added} {t("prof_import_exp")}
                           </li>
                         )}
                         {importSummary.skills_added > 0 && (
                           <li className="flex items-center gap-2 text-muted-foreground">
                             <Sparkles className="h-3.5 w-3.5 text-success shrink-0" />
-                            {importSummary.skills_added} {lang === 'fr' ? 'compétence(s) ajoutée(s)' : 'skill(s) added'}
+                            {importSummary.skills_added} {t("prof_import_skills")}
                           </li>
                         )}
                         {importSummary.certifications_added > 0 && (
                           <li className="flex items-center gap-2 text-muted-foreground">
                             <Award className="h-3.5 w-3.5 text-yellow-500 shrink-0" />
-                            {importSummary.certifications_added} {lang === 'fr' ? 'certification(s) ajoutée(s)' : 'certification(s) added'}
+                            {importSummary.certifications_added} {t("prof_import_certs")}
                           </li>
                         )}
                         {importSummary.portfolio_added > 0 && (
                           <li className="flex items-center gap-2 text-muted-foreground">
                             <Layers className="h-3.5 w-3.5 text-purple-500 shrink-0" />
-                            {importSummary.portfolio_added} {lang === 'fr' ? 'élément(s) de portfolio ajouté(s)' : 'portfolio item(s) added'}
+                            {importSummary.portfolio_added} {t("prof_import_portfolio")}
                           </li>
                         )}
                         {importSummary.personal_fields_updated?.length > 0 && (
                           <li className="flex items-center gap-2 text-muted-foreground">
                             <User className="h-3.5 w-3.5 text-primary shrink-0" />
-                            {lang === 'fr' ? 'Infos personnelles complétées' : 'Personal info updated'} : {importSummary.personal_fields_updated.join(', ')}
+                            {t("prof_import_personal")} : {importSummary.personal_fields_updated.join(', ')}
                           </li>
                         )}
                         {importSummary.aspirations_updated && (
                           <li className="flex items-center gap-2 text-muted-foreground">
                             <Target className="h-3.5 w-3.5 text-accent shrink-0" />
-                            {lang === 'fr' ? 'Aspirations mises à jour' : 'Aspirations updated'}
+                            {t("prof_import_aspirations")}
                           </li>
                         )}
                       </ul>
                     ) : (
-                      <p className="text-sm text-muted-foreground">
-                        {lang === 'fr'
-                          ? 'Aucune nouvelle information détectée dans le document fourni.'
-                          : 'No new information detected in the provided document.'}
-                      </p>
+                      <p className="text-sm text-muted-foreground">{t("prof_import_none")}</p>
                     )}
                     <Button
                       size="sm"
@@ -568,7 +547,7 @@ function ProfilePage() {
                       className="mt-2"
                     >
                       <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                      {lang === 'fr' ? 'Importer un autre document' : 'Import another document'}
+                      {t("prof_import_another")}
                     </Button>
                   </div>
                 ) : (
@@ -585,7 +564,7 @@ function ProfilePage() {
                         }`}
                       >
                         <Upload className="h-3 w-3" />
-                        {lang === 'fr' ? 'Fichier' : 'File'}
+                        {t("prof_import_file_btn")}
                       </button>
                       <button
                         onClick={() => setImportMode('text')}
@@ -596,7 +575,7 @@ function ProfilePage() {
                         }`}
                       >
                         <Type className="h-3 w-3" />
-                        {lang === 'fr' ? 'Texte' : 'Text'}
+                        {t("prof_import_text_btn")}
                       </button>
                     </div>
 
@@ -606,7 +585,7 @@ function ProfilePage() {
                           <Upload className="h-6 w-6 text-muted-foreground" />
                           <div className="text-sm text-center">
                             <span className="text-accent font-medium">
-                              {lang === 'fr' ? 'Choisir un fichier' : 'Choose a file'}
+                              {t("prof_import_choose")}
                             </span>
                             <span className="text-muted-foreground">
                               {' — '}PDF, DOCX, TXT
@@ -631,11 +610,7 @@ function ProfilePage() {
                         rows={6}
                         value={importText}
                         onChange={(e) => setImportText(e.target.value)}
-                        placeholder={
-                          lang === 'fr'
-                            ? 'Colle ici ton CV, ta bio, ou toute description de ton parcours...'
-                            : 'Paste your CV, bio, or any description of your journey here...'
-                        }
+                        placeholder={t("prof_import_placeholder")}
                       />
                     )}
 
@@ -650,15 +625,14 @@ function ProfilePage() {
                         className="bg-gradient-hero border-0 shadow-glow w-full"
                       >
                         {importBusy ? (
-                          <><Loader2 className="h-4 w-4 animate-spin mr-2" />{lang === 'fr' ? 'Analyse en cours...' : 'Analyzing...'}</>
+                          <><Loader2 className="h-4 w-4 animate-spin mr-2" />{t("prof_import_analyzing")}</>
                         ) : (
-                          <><Wand2 className="h-4 w-4 mr-2" />{lang === 'fr' ? "Lancer l'analyse" : 'Run analysis'}</>
+                          <><Wand2 className="h-4 w-4 mr-2" />{t("prof_import_analyze")}</>
                         )}
                       </Button>
                       {importNextDate && (
                         <p className="text-xs text-muted-foreground text-center">
-                          {lang === 'fr' ? 'Disponible le ' : 'Available on '}
-                          {importNextDate.toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          {t("prof_import_available")} {importNextDate.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}
                         </p>
                       )}
                     </div>
@@ -671,10 +645,10 @@ function ProfilePage() {
           {/* Aperçu rapide */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             {[
-              { label: lang === "fr" ? "Formations" : "Education", count: education.length, icon: GraduationCap, tab: "education", color: "text-primary bg-primary/10" },
-              { label: lang === "fr" ? "Expériences" : "Experiences", count: exps.length, icon: Briefcase, tab: "experience", color: "text-accent bg-accent/10" },
-              { label: lang === "fr" ? "Compétences" : "Skills", count: skills.length, icon: Sparkles, tab: "skills", color: "text-success bg-success/10" },
-              { label: lang === "fr" ? "Certifications" : "Certifications", count: certs.length, icon: Award, tab: "education", color: "text-yellow-600 bg-yellow-500/10" },
+              { label: t("prof_stat_edu"), count: education.length, icon: GraduationCap, tab: "education", color: "text-primary bg-primary/10" },
+              { label: t("prof_stat_exp"), count: exps.length, icon: Briefcase, tab: "experience", color: "text-accent bg-accent/10" },
+              { label: t("prof_stat_skills"), count: skills.length, icon: Sparkles, tab: "skills", color: "text-success bg-success/10" },
+              { label: t("prof_cert_section"), count: certs.length, icon: Award, tab: "education", color: "text-yellow-600 bg-yellow-500/10" },
               { label: "Portfolio", count: portfolio.length, icon: Layers, tab: "portfolio", color: "text-purple-500 bg-purple-500/10" },
             ].map((stat) => {
               const Icon = stat.icon;
@@ -706,7 +680,7 @@ function ProfilePage() {
                 { key: "entrepreneurship", label: t("score_entrepreneurship"), value: scores.entrepreneurship ?? 50 },
                 { key: "community", label: t("score_community"), value: scores.community ?? 55 },
               ].map((s) => (
-                <Ring key={s.key} value={s.value} label={s.label} quality={scoreQuality(s.value, lang)} />
+                <Ring key={s.key} value={s.value} label={s.label} quality={scoreQuality(s.value, t)} />
               ))}
             </div>
           </Card>
@@ -717,7 +691,7 @@ function ProfilePage() {
               {insightsHighlighted && (
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary/5 border border-primary/20 rounded-lg px-3 py-1.5 mb-3">
                   <Sparkles className="h-3 w-3 shrink-0" />
-                  {lang === "fr" ? "Nouveaux insights générés — retrouvez-les ci-dessous !" : "New insights generated — see them below!"}
+                  {t("prof_insights_new")}
                 </div>
               )}
               <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 mb-3">
@@ -729,58 +703,136 @@ function ProfilePage() {
                   </Button>
                   {aiInsightsNextDate && (
                     <span className="text-[10px] text-muted-foreground text-right">
-                      {lang === "fr" ? "Disponible le " : "Available on "}
-                      {aiInsightsNextDate.toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US", { day: "numeric", month: "short" })}
+                      {t("prof_ai_available")} {aiInsightsNextDate.toLocaleDateString(undefined, { day: "numeric", month: "short" })}
                     </span>
                   )}
                 </div>
               </div>
-              {insights.personality && <p className="text-sm text-muted-foreground italic mb-3">"{insights.personality}"</p>}
-              {insights.strengths && (
-                <div className="mb-2">
-                  <div className="text-xs font-semibold text-success uppercase">{t("prof_strong")}</div>
-                  <div className="flex flex-wrap gap-1 mt-1">{(insights.strengths as string[]).map((s) => <Badge key={s} variant="secondary">{s}</Badge>)}</div>
-                </div>
-              )}
-              {insights.improvements && (
-                <div className="mb-3">
-                  <div className="text-xs font-semibold text-accent uppercase">{t("prof_improve")}</div>
-                  <div className="flex flex-wrap gap-1 mt-1">{(insights.improvements as string[]).map((s) => <Badge key={s} variant="outline">{s}</Badge>)}</div>
-                </div>
-              )}
-              {(insights[lang === "fr" ? "tips_fr" : "tips_en"] as string[] | undefined)?.length ? (
-                <div className="mt-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
-                  <div className="text-xs font-semibold mb-1">{t("prof_ai_tips")}</div>
-                  <ul className="text-sm space-y-1 list-disc list-inside">
-                    {(insights[lang === "fr" ? "tips_fr" : "tips_en"] as string[]).map((tip, i) => <li key={i}>{tip}</li>)}
-                  </ul>
-                </div>
-              ) : null}
-              {!insights.personality && (
+
+              {insights.personality ? (
+                <>
+                  <p className="text-sm text-muted-foreground italic mb-3 line-clamp-1">"{insights.personality}"</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full gap-1.5"
+                    onClick={() => setInsightsDialogOpen(true)}
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    {t("prof_ai_see_result")}
+                  </Button>
+                </>
+              ) : (
                 completion.score < 30 ? (
                   <div className="p-3 rounded-lg bg-muted/60 border border-border/50">
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {lang === "fr"
-                        ? "Ton profil est encore peu rempli. Complète d'abord tes informations de base pour que l'analyse IA soit pertinente."
-                        : "Your profile is still sparse. Complete your basic information first so the AI analysis is meaningful."}
-                    </p>
+                    <p className="text-sm text-muted-foreground mb-2">{t("prof_ai_sparse")}</p>
                     <button onClick={() => setActiveTab("personal")} className="text-xs text-primary font-semibold hover:underline flex items-center gap-1">
-                      <Plus className="h-3 w-3" />{lang === "fr" ? "Compléter mon profil" : "Complete my profile"}
+                      <Plus className="h-3 w-3" />{t("prof_ai_complete_btn")}
                     </button>
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    {lang === "fr" ? "Lance l'analyse IA pour découvrir tes forces et axes de progression." : "Run AI analysis to discover your strengths and growth areas."}
+                    {t("prof_insights_empty")}
                   </p>
                 )
               )}
             </Card>
 
+            {/* AI Insights Full Dialog */}
+            <Dialog open={insightsDialogOpen} onOpenChange={setInsightsDialogOpen}>
+              <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Brain className="h-5 w-5 text-primary" />
+                    {t("prof_ai_dialog_title")}
+                  </DialogTitle>
+                  {aiInsightsNextDate && (
+                    <DialogDescription>
+                      {t("prof_ai_active_until").replace("{date}", aiInsightsNextDate.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }))}
+                    </DialogDescription>
+                  )}
+                </DialogHeader>
+
+                <div className="space-y-5 pt-2">
+                  {/* Personality */}
+                  {insights.personality && (
+                    <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+                      <p className="text-sm italic text-foreground">"{insights.personality}"</p>
+                    </div>
+                  )}
+
+                  {/* Strengths */}
+                  {(insights.strengths as string[] | undefined)?.length ? (
+                    <div>
+                      <div className="text-xs font-semibold text-success uppercase mb-2">{t("prof_strong")}</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(insights.strengths as string[]).map((s) => <Badge key={s} variant="secondary" className="text-sm py-1">{s}</Badge>)}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {/* Areas to improve */}
+                  {(insights.improvements as string[] | undefined)?.length ? (
+                    <div>
+                      <div className="text-xs font-semibold text-accent uppercase mb-2">{t("prof_improve")}</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(insights.improvements as string[]).map((s) => <Badge key={s} variant="outline" className="text-sm py-1">{s}</Badge>)}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {/* Tips */}
+                  {(insights[lang === "fr" ? "tips_fr" : "tips_en"] as string[] | undefined)?.length ? (
+                    <div className="p-4 rounded-xl bg-muted/60 border border-border/50">
+                      <div className="text-xs font-semibold mb-2">{t("prof_ai_tips")}</div>
+                      <ul className="text-sm space-y-2 list-disc list-inside">
+                        {(insights[lang === "fr" ? "tips_fr" : "tips_en"] as string[]).map((tip) => <li key={tip}>{tip}</li>)}
+                      </ul>
+                    </div>
+                  ) : null}
+
+                  {/* Readiness scores */}
+                  {insights.readiness && Object.keys(insights.readiness).length > 0 && (
+                    <div>
+                      <div className="text-xs font-semibold uppercase mb-3">{t("prof_ai_readiness")}</div>
+                      <div className="space-y-3">
+                        {Object.entries(insights.readiness as Record<string, number>).map(([key, value]) => (
+                          <div key={key}>
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-sm capitalize">{key}</span>
+                              <span className="text-sm font-semibold text-primary">{value}%</span>
+                            </div>
+                            <Progress value={value} className="h-2" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Identity labels */}
+                  {(insights.identity_labels as string[] | undefined)?.length ? (
+                    <div>
+                      <div className="text-xs font-semibold uppercase mb-2">{t("prof_identity")}</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(insights.identity_labels as string[]).map((label) => (
+                          <Badge key={label} className="bg-gradient-hero text-primary-foreground border-0">{label}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                <DialogFooter className="mt-4">
+                  <Button variant="outline" onClick={() => setInsightsDialogOpen(false)}>{t("prof_cancel")}</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
             {/* Badges */}
             <Card className="p-6 border-border/50">
               <h3 className="font-semibold mb-3">{t("prof_badges")}</h3>
               {badges.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{lang === "fr" ? "Pas encore de badge — complète ton profil pour en gagner." : "No badges yet — complete your profile to earn them."}</p>
+                <p className="text-sm text-muted-foreground">{t("prof_badges_empty")}</p>
               ) : (
                 <div className="grid grid-cols-3 gap-3">
                   {badges.map((b: any) => (
@@ -795,8 +847,8 @@ function ProfilePage() {
 
             {/* CV IA */}
             <Card className="p-6 border-border/50">
-              <h3 className="font-semibold mb-3 flex items-center gap-2"><FileText className="h-4 w-4 text-primary" />{lang === "fr" ? "CV IA" : "AI CV"}</h3>
-              <p className="text-sm text-muted-foreground mb-3">{lang === "fr" ? "Génère un CV PDF professionnel basé sur ton profil." : "Generate a professional PDF CV from your profile."}</p>
+              <h3 className="font-semibold mb-3 flex items-center gap-2"><FileText className="h-4 w-4 text-primary" />{t("prof_cv_title")}</h3>
+              <p className="text-sm text-muted-foreground mb-3">{t("prof_cv_desc")}</p>
               <Button onClick={generateCv} disabled={cvBusy} className="bg-gradient-hero shadow-glow border-0 w-full">
                 {cvBusy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
                 {cvBusy ? t("prof_ai_running") : t("prof_generate_cv")}
@@ -804,12 +856,12 @@ function ProfilePage() {
               {p.cvUrl && (
                 <Button variant="outline" className="w-full mt-2" onClick={downloadCv}>
                   <Download className="h-4 w-4 mr-2" />
-                  {lang === "fr" ? "Télécharger mon CV" : "Download my CV"}
+                  {t("prof_cv_download")}
                 </Button>
               )}
               {p.cvGeneratedAt && (
                 <p className="text-xs text-muted-foreground mt-2 text-center">
-                  {lang === "fr" ? "Généré le " : "Generated on "}{new Date(p.cvGeneratedAt).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB", { day: "numeric", month: "long", year: "numeric" })}
+                  {t("prof_cv_generated_on")} {new Date(p.cvGeneratedAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })}
                 </p>
               )}
             </Card>
@@ -825,7 +877,7 @@ function ProfilePage() {
               <div className="flex items-start justify-between gap-3">
                 <h3 className="font-semibold flex items-center gap-2"><User className="h-4 w-4 text-primary" />{t("prof_personal_info")}</h3>
                 <Button size="sm" variant="outline" onClick={() => setShowPersonalForm(true)}>
-                  <Edit3 className="h-4 w-4 mr-1.5" />{t("prof_edit") || "Modifier"}
+                  <Edit3 className="h-4 w-4 mr-1.5" />{t("prof_edit")}
                 </Button>
               </div>
               <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
@@ -834,10 +886,10 @@ function ProfilePage() {
                   { label: t("prof_gender"), value: p.gender ? (t(`prof_gender_${p.gender}` as any) || p.gender) : null },
                   { label: t("prof_dob"), value: p.date_of_birth ? fmtDate(p.date_of_birth) : null },
                   { label: t("prof_nationality"), value: p.nationality },
-                  { label: t("prof_residence_country") || "Pays de résidence", value: p.residence_country },
+                  { label: t("prof_residence_country"), value: p.residence_country },
                   { label: t("prof_city"), value: p.city },
                   { label: t("prof_phone"), value: p.phone },
-                  { label: t("prof_primary_lang") || "Langue préférée", value: p.preferred_language },
+                  { label: t("prof_primary_lang"), value: p.preferred_language },
                 ].map(({ label, value }) => (
                   <div key={String(label)}>
                     <div className="text-xs text-muted-foreground mb-0.5">{label}</div>
@@ -847,7 +899,7 @@ function ProfilePage() {
               </div>
               {Array.isArray(p.languages_spoken) && p.languages_spoken.length > 0 && (
                 <div>
-                  <div className="text-xs text-muted-foreground mb-1.5">{t("prof_languages") || "Langues parlées"}</div>
+                  <div className="text-xs text-muted-foreground mb-1.5">{t("prof_languages")}</div>
                   <div className="flex flex-wrap gap-1.5">
                     {p.languages_spoken.map((l: string) => <Badge key={l} variant="secondary" className="text-xs">{l}</Badge>)}
                   </div>
@@ -925,7 +977,7 @@ function ProfilePage() {
               <>
                 <ul className="space-y-3">
                   {xpEvents.slice((timelinePage - 1) * 6, timelinePage * 6).map((e: any) => (
-                    <li key={e.id} className="flex items-start gap-3 text-sm">
+                    <li key={String(e._id ?? e.id)} className="flex items-start gap-3 text-sm">
                       <div className="mt-1 h-2 w-2 rounded-full bg-primary shrink-0" />
                       <div className="flex-1">
                         <div className="font-medium">+{e.amount} XP · <span className="text-muted-foreground font-normal">{e.label ?? e.reason ?? e.type}</span></div>
@@ -937,10 +989,10 @@ function ProfilePage() {
                 {Math.ceil(xpEvents.length / 6) > 1 && (
                   <div className="flex justify-end gap-2 mt-4">
                     <Button variant="outline" size="sm" onClick={() => setTimelinePage((prev) => Math.max(prev - 1, 1))} disabled={timelinePage === 1}>
-                      {lang === "fr" ? "Précédent" : "Previous"}
+                      {t("prof_prev")}
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => setTimelinePage((prev) => Math.min(prev + 1, Math.ceil(xpEvents.length / 6)))} disabled={timelinePage === Math.ceil(xpEvents.length / 6)}>
-                      {lang === "fr" ? "Suivant" : "Next"}
+                      {t("prof_next")}
                     </Button>
                   </div>
                 )}
@@ -989,7 +1041,7 @@ function ProfilePage() {
           <div className="relative max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
             <img
               src={p.avatarUrl}
-              alt="Photo de profil"
+              alt={t("prof_avatar_label")}
               className="w-full rounded-2xl shadow-2xl object-cover"
             />
             <button
@@ -1100,9 +1152,9 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
     try {
       const { avatarUrl } = await profileAPI.uploadAvatar(p.id, file);
       setAvatarPreview(avatarUrl);
-      toast.success(lang === "fr" ? "Photo de profil mise à jour" : "Profile picture updated");
+      toast.success(t("prof_avatar_updated"));
     } catch (err: any) {
-      toast.error(err.message || (lang === "fr" ? "Erreur lors de l'upload" : "Upload failed"));
+      toast.error(err.message || t("prof_avatar_error"));
       setAvatarPreview(p.avatarUrl || null);
     } finally {
       setAvatarUploading(false);
@@ -1111,11 +1163,11 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
 
   const validate = () => {
     if (!f.preferred_name.trim()) {
-      toast.error(lang === "fr" ? "Le nom préféré est requis." : "Preferred name is required.");
+      toast.error(t("prof_val_name_required"));
       return false;
     }
     if (f.preferred_name.trim().length > 100) {
-      toast.error(lang === "fr" ? "Le nom préféré ne doit pas dépasser 100 caractères." : "Preferred name must be at most 100 characters.");
+      toast.error(t("prof_val_name_long"));
       return false;
     }
     if (f.date_of_birth) {
@@ -1123,20 +1175,20 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
       const ageDiff = Date.now() - dob.getTime();
       const age = new Date(ageDiff).getUTCFullYear() - 1970;
       if (age < 13) {
-        toast.error(lang === "fr" ? "Tu dois avoir au moins 13 ans." : "You must be at least 13 years old.");
+        toast.error(t("prof_val_age_min"));
         return false;
       }
     }
     if (f.phone && !/^\+?[\d\s\-().]{8,20}$/.test(f.phone)) {
-      toast.error(lang === "fr" ? "Numéro de téléphone invalide." : "Invalid phone number.");
+      toast.error(t("prof_val_phone_invalid"));
       return false;
     }
     if (f.bio.length > 500) {
-      toast.error(lang === "fr" ? "La bio ne doit pas dépasser 500 caractères." : "Bio must be at most 500 characters.");
+      toast.error(t("prof_val_bio_long"));
       return false;
     }
     if (showOtherLang && otherLangText.trim() && otherLangText.trim().length < 2) {
-      toast.error(lang === "fr" ? "Précise les autres langues." : "Please specify other languages.");
+      toast.error(t("prof_val_lang_other"));
       return false;
     }
     return true;
@@ -1160,8 +1212,8 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
   };
 
   const genderOptions = [
-    { code: "male", label: t("prof_gender_male") || "Homme" },
-    { code: "female", label: t("prof_gender_female") || "Femme" },
+    { code: "male", label: t("prof_gender_male") },
+    { code: "female", label: t("prof_gender_female") },
   ];
 
   return (
@@ -1194,16 +1246,14 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
           )}
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-medium">{lang === "fr" ? "Photo de profil" : "Profile picture"}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {lang === "fr" ? "JPG, PNG ou WebP · max 5 Mo" : "JPG, PNG or WebP · max 5 MB"}
-          </p>
+          <p className="text-sm font-medium">{t("prof_avatar_label")}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{t("prof_avatar_formats")}</p>
         </div>
       </div>
 
       {/* Identité */}
       <div className="space-y-3">
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><User className="h-3.5 w-3.5" />Identité</div>
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><User className="h-3.5 w-3.5" />{t("prof_section_identity")}</div>
         <div className="grid sm:grid-cols-2 gap-4">
           <Field label={t("prof_preferred_name")}>
             <Input
@@ -1214,9 +1264,9 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
           </Field>
           <Field label={t("prof_gender")}>
             <Select value={f.gender || "null"} onValueChange={(v) => setF(prev => ({ ...prev, gender: v === "null" ? "" : v }))}>
-              <SelectTrigger><SelectValue placeholder={t("prof_select_gender") || "Sélectionner"} /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("prof_select_gender")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="null">{t("prof_not_specified") || "Non précisé"}</SelectItem>
+                <SelectItem value="null">{t("prof_not_specified")}</SelectItem>
                 {genderOptions.map((g) => <SelectItem key={g.code} value={g.code}>{g.label}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -1226,9 +1276,9 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
           </Field>
           <Field label={t("prof_nationality")}>
             <Select value={f.nationality || "null"} onValueChange={(v) => handleNationalityChange(v === "null" ? "" : v)}>
-              <SelectTrigger><SelectValue placeholder={t("prof_select_country") || "Sélectionner"} /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("prof_select_country")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="null">{t("prof_not_specified") || "Non précisé"}</SelectItem>
+                <SelectItem value="null">{t("prof_not_specified")}</SelectItem>
                 {countries.map((c) => <SelectItem key={c.code} value={c.code}>{c.name_fr || c.name}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -1238,13 +1288,13 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
 
       {/* Localisation */}
       <div className="space-y-3">
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />Localisation</div>
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{t("prof_section_location")}</div>
         <div className="grid sm:grid-cols-2 gap-4">
-          <Field label={t("prof_residence_country") || "Pays de résidence"}>
+          <Field label={t("prof_residence_country")}>
             <Select value={f.residence_country || "null"} onValueChange={(v) => handleResidenceCountryChange(v === "null" ? "" : v)}>
-              <SelectTrigger><SelectValue placeholder={t("prof_select_country") || "Sélectionner"} /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("prof_select_country")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="null">{t("prof_not_specified") || "Non précisé"}</SelectItem>
+                <SelectItem value="null">{t("prof_not_specified")}</SelectItem>
                 {countries.map((c) => <SelectItem key={c.code} value={c.code}>{c.name_fr || c.name}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -1252,7 +1302,7 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
           <Field label={t("prof_city")}>
             {loadingCities ? (
               <div className="flex items-center gap-2 px-3 py-2 border rounded-md text-sm text-muted-foreground">
-                <Loader2 className="h-3 w-3 animate-spin" />{t("loading") || "Chargement..."}
+                <Loader2 className="h-3 w-3 animate-spin" />{t("loading")}
               </div>
             ) : (
               <Select
@@ -1261,10 +1311,10 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
                 disabled={!f.residence_country || cities.length === 0}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={f.residence_country ? t("prof_select_city") || "Sélectionner une ville" : t("prof_select_country_first") || "Choisir un pays d'abord"} />
+                  <SelectValue placeholder={f.residence_country ? t("prof_select_city") : t("prof_select_country_first")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="null">{t("prof_not_specified") || "Non précisé"}</SelectItem>
+                  <SelectItem value="null">{t("prof_not_specified")}</SelectItem>
                   {cities.map((c, idx) => <SelectItem key={idx} value={c.name}>{c.name_fr || c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -1275,7 +1325,7 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
 
       {/* Contact & Langue */}
       <div className="space-y-3">
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" />Contact & Langue</div>
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" />{t("prof_section_contact")}</div>
         <div className="grid sm:grid-cols-2 gap-4">
           <Field label={t("prof_phone")}>
             <Input
@@ -1284,11 +1334,11 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
               placeholder="+221 77 000 00 00"
             />
           </Field>
-          <Field label={t("prof_primary_lang") || "Langue préférée"}>
+          <Field label={t("prof_primary_lang")}>
             <Select value={f.preferred_language || "null"} onValueChange={(v) => setF(prev => ({ ...prev, preferred_language: v === "null" ? "" : v }))}>
-              <SelectTrigger><SelectValue placeholder={t("prof_select_language") || "Sélectionner"} /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("prof_select_language")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="null">{t("prof_not_specified") || "Non précisé"}</SelectItem>
+                <SelectItem value="null">{t("prof_not_specified")}</SelectItem>
                 {languages.map((l) => <SelectItem key={l.code} value={l.code}>{l.name_fr || l.name}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -1298,7 +1348,7 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
 
       {/* Langues parlées — checkboxes */}
       <div className="space-y-3">
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><Languages className="h-3.5 w-3.5" />{t("prof_languages") || "Langues parlées"}</div>
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><Languages className="h-3.5 w-3.5" />{t("prof_languages")}</div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {COMMON_LANGUAGES.map((lang) => (
             <label key={lang} className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg border cursor-pointer transition-colors select-none ${checkedLangs.includes(lang) ? "border-primary/50 bg-primary/5 text-primary" : "border-border/40 bg-muted/30 hover:border-border"}`}>
@@ -1318,14 +1368,14 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
               checked={showOtherLang}
               onChange={() => setShowOtherLang(v => !v)}
             />
-            {lang === "fr" ? "Autres" : "Others"}
+            {t("prof_lang_others")}
           </label>
         </div>
         {showOtherLang && (
           <Input
             value={otherLangText}
             onChange={(e) => setOtherLangText(e.target.value)}
-            placeholder={lang === "fr" ? "Ex : Tigrinia, Swahili..." : "E.g. Swahili, Tigrinya..."}
+            placeholder={t("prof_lang_specify")}
           />
         )}
       </div>
@@ -1346,7 +1396,7 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
 
       {/* Disponibilité */}
       <div className="space-y-3">
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Disponibilité</div>
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("prof_section_availability")}</div>
         <div className="flex flex-wrap gap-6">
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <Switch checked={f.willing_to_relocate} onCheckedChange={(v) => setF(prev => ({ ...prev, willing_to_relocate: v }))} />
@@ -1360,7 +1410,7 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
       </div>
 
       <div className="flex justify-end gap-2 pt-2">
-        <Button variant="ghost" onClick={onClose} disabled={saving}>{lang === "fr" ? "Annuler" : "Cancel"}</Button>
+        <Button variant="ghost" onClick={onClose} disabled={saving}>{t("prof_cancel")}</Button>
         <Button onClick={submit} disabled={saving} className="bg-gradient-hero border-0 shadow-glow">
           {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
           {t("prof_save")}
@@ -1393,7 +1443,7 @@ function EducationSection({ items, t, userId, reload }: any) {
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold truncate">{e.field || "—"}</div>
                   <div className="text-sm text-muted-foreground">{e.degree && <span className="mr-1">{e.degree} ·</span>}{e.institution}{e.country ? `, ${e.country}` : ""}</div>
-                  <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><Calendar className="h-3 w-3" />{fmtDate(e.startDate)} → {e.currentlyStudying ? "présent" : fmtDate(e.endDate)}</div>
+                  <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><Calendar className="h-3 w-3" />{fmtDate(e.startDate)} → {e.currentlyStudying ? t("prof_now") : fmtDate(e.endDate)}</div>
                   {e.description && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{e.description}</p>}
                 </div>
               </div>
@@ -1401,13 +1451,13 @@ function EducationSection({ items, t, userId, reload }: any) {
                 <EditEduDialog education={e} userId={userId} t={t} reload={reload} />
                 <Button size="icon" variant="ghost" onClick={async () => {
                   const eid = e.id ?? (e as any)._id;
-                  if (!eid) { toast.error("ID introuvable — rechargez la page"); return; }
+                  if (!eid) { toast.error(t("prof_id_missing")); return; }
                   try {
                     await profileAPI.deleteEducation(userId, eid);
-                    toast.success("Formation supprimée");
+                    toast.success(t("prof_edu_deleted"));
                     reload();
                   } catch (err: any) {
-                    toast.error(err.message || "Erreur lors de la suppression");
+                    toast.error(err.message || t("prof_delete_error"));
                   }
                 }}><Trash2 className="h-4 w-4" /></Button>
               </div>
@@ -1427,7 +1477,7 @@ function EduDialog({ userId, t, reload }: any) {
   const degreeOptions = useMemo(() => getDegreeListByLang(lang as "en" | "fr"), [lang]);
 
   const submit = async () => {
-    if (!f.institution) return toast.error("Institution required");
+    if (!f.institution) return toast.error(t("prof_institution_required"));
     setLoading(true);
     try {
       await profileAPI.addEducation(userId, {
@@ -1445,7 +1495,7 @@ function EduDialog({ userId, t, reload }: any) {
       setF({ institution: "" });
       reload();
     } catch (err: any) {
-      toast.error(err.message || "Erreur lors de l'ajout");
+      toast.error(err.message || t("prof_error_add"));
     } finally {
       setLoading(false);
     }
@@ -1462,9 +1512,9 @@ function EduDialog({ userId, t, reload }: any) {
           <div className="grid sm:grid-cols-2 gap-3">
             <Field label={t("prof_edu_degree")}>
               <Select value={f.degree || "null"} onValueChange={(v) => setF({ ...f, degree: v === "null" ? "" : v })}>
-                <SelectTrigger><SelectValue placeholder={t("prof_select_degree") || "Select degree"} /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("prof_select_degree")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="null">{t("prof_not_specified") || "Not specified"}</SelectItem>
+                  <SelectItem value="null">{t("prof_not_specified")}</SelectItem>
                   {degreeOptions.map((deg) => (
                     <SelectItem key={deg.value} value={deg.value}>{deg.label}</SelectItem>
                   ))}
@@ -1510,7 +1560,7 @@ function EditEduDialog({ education, userId, t, reload }: any) {
   const degreeOptions = useMemo(() => getDegreeListByLang(lang as "en" | "fr"), [lang]);
 
   const submit = async () => {
-    if (!f.institution) return toast.error("Institution required");
+    if (!f.institution) return toast.error(t("prof_institution_required"));
     try {
       await profileAPI.updateEducation(userId, f.id!, {
         school: f.institution,
@@ -1526,7 +1576,7 @@ function EditEduDialog({ education, userId, t, reload }: any) {
       setOpen(false);
       reload();
     } catch (err: any) {
-      toast.error(err.message || "Erreur lors de la mise à jour");
+      toast.error(err.message || t("prof_error_update"));
     }
   };
 
@@ -1542,9 +1592,9 @@ function EditEduDialog({ education, userId, t, reload }: any) {
           <div className="grid sm:grid-cols-2 gap-3">
             <Field label={t("prof_edu_degree")}>
               <Select value={f.degree || "null"} onValueChange={(v) => setF({ ...f, degree: v === "null" ? "" : v })}>
-                <SelectTrigger><SelectValue placeholder={t("prof_select_degree") || "Select degree"} /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("prof_select_degree")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="null">{t("prof_not_specified") || "Not specified"}</SelectItem>
+                  <SelectItem value="null">{t("prof_not_specified")}</SelectItem>
                   {degreeOptions.map((deg) => (
                     <SelectItem key={deg.value} value={deg.value}>{deg.label}</SelectItem>
                   ))}
@@ -1589,7 +1639,7 @@ function CertificationsSection({ items, t, userId, reload }: any) {
       setF({ name: "" });
       reload();
     } catch (err: any) {
-      toast.error(err.message || "Erreur lors de l'ajout");
+      toast.error(err.message || t("prof_error_add"));
     } finally {
       setLoading(false);
     }
@@ -1624,14 +1674,14 @@ function CertificationsSection({ items, t, userId, reload }: any) {
       {items.length === 0 ? <p className="text-sm text-muted-foreground">{t("prof_cert_empty")}</p> : (
         <ul className="space-y-2">
           {items.map((c: Cert) => (
-            <li key={(c as any)._id ?? c.id} className="flex justify-between items-center p-3 rounded-xl bg-muted/40 border border-border/40 hover:border-primary/20 transition-colors">
-              <div className="flex gap-3 items-start">
-                <div className="h-8 w-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+            <li key={(c as any)._id ?? c.id} className="flex items-start justify-between gap-3 p-4 rounded-xl bg-muted/40 border border-border/40 hover:border-primary/20 transition-colors">
+              <div className="flex gap-3 flex-1 min-w-0">
+                <div className="h-9 w-9 rounded-lg bg-accent/10 flex items-center justify-center shrink-0 mt-0.5">
                   <Award className="h-4 w-4 text-accent" />
                 </div>
-                <div>
-                  <div className="font-semibold text-sm">{c.name}</div>
-                  <div className="text-xs text-muted-foreground">{c.issuer}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold truncate">{c.name}</div>
+                  <div className="text-sm text-muted-foreground">{c.issuer}</div>
                   {(c.issueDate ?? c.issue_date) && <Badge variant="outline" className="text-[10px] mt-1 px-1.5 py-0">{fmtDate(c.issueDate ?? c.issue_date)}</Badge>}
                 </div>
               </div>
@@ -1639,13 +1689,13 @@ function CertificationsSection({ items, t, userId, reload }: any) {
                 <EditCertificationDialog certification={c} userId={userId} t={t} reload={reload} />
                 <Button size="icon" variant="ghost" onClick={async () => {
                   const cid = c.id ?? (c as any)._id;
-                  if (!cid) { toast.error("ID introuvable — rechargez la page"); return; }
+                  if (!cid) { toast.error(t("prof_id_missing")); return; }
                   try {
                     await profileAPI.deleteCertification(userId, cid);
-                    toast.success("Certification supprimée");
+                    toast.success(t("prof_cert_deleted"));
                     reload();
                   } catch (err: any) {
-                    toast.error(err.message || "Erreur lors de la suppression");
+                    toast.error(err.message || t("prof_delete_error"));
                   }
                 }}><Trash2 className="h-4 w-4" /></Button>
               </div>
@@ -1669,7 +1719,7 @@ function EditCertificationDialog({ certification, userId, t, reload }: any) {
   });
 
   const submit = async () => {
-    if (!f.name) return toast.error("Certification name required");
+    if (!f.name) return toast.error(t("prof_cert_name_required"));
     try {
       await profileAPI.updateCertification(userId, f.id!, {
         title: f.name,
@@ -1681,7 +1731,7 @@ function EditCertificationDialog({ certification, userId, t, reload }: any) {
       setOpen(false);
       reload();
     } catch (err: any) {
-      toast.error(err.message || "Erreur lors de la mise à jour");
+      toast.error(err.message || t("prof_error_update"));
     }
   };
 
@@ -1751,7 +1801,7 @@ function ExperienceSection({ items, t, userId, reload }: any) {
       };
       await profileAPI.addExperience(userId, payload);
       await awardXp(userId, 15, "added_experience");
-      toast.success(t("prof_added_exp") ?? "Expérience ajoutée !");
+      toast.success(t("prof_added_exp"));
       setOpen(false);
       setF({ role: "", kind: "job", isCurrent: false });
       reload();
@@ -1821,7 +1871,7 @@ function ExperienceSection({ items, t, userId, reload }: any) {
                   </div>
                   <Badge variant="secondary" className="text-[10px] shrink-0">{kindLabel(e.kind ?? "job")}</Badge>
                 </div>
-                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><Calendar className="h-3 w-3" />{fmtDate(e.startDate)} → {e.isCurrent ? "présent" : fmtDate(e.endDate)}</div>
+                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><Calendar className="h-3 w-3" />{fmtDate(e.startDate)} → {e.isCurrent ? t("prof_now") : fmtDate(e.endDate)}</div>
                 {e.description && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{e.description}</p>}
                 {e.impact && <p className="text-xs text-accent mt-1 flex items-center gap-1"><Sparkles className="h-3 w-3" />{e.impact}</p>}
               </div>
@@ -1829,14 +1879,14 @@ function ExperienceSection({ items, t, userId, reload }: any) {
                 <EditExperienceDialog experience={e} userId={userId} t={t} reload={reload} />
                 <Button size="icon" variant="ghost" onClick={async () => {
                   const itemId = e.id ?? e.experience_id ?? e._id;
-                  if (!itemId) return toast.error("ID introuvable");
-                  if (!window.confirm("Supprimer cette expérience ?")) return;
+                  if (!itemId) return toast.error(t("prof_id_missing"));
+                  if (!window.confirm(t("prof_exp_confirm_delete"))) return;
                   try {
                     await profileAPI.deleteExperience(userId, itemId);
-                    toast.success("Expérience supprimée");
+                    toast.success(t("prof_exp_deleted"));
                     reload();
                   } catch (err: any) {
-                    toast.error(err.message || "Erreur lors de la suppression");
+                    toast.error(err.message || t("prof_delete_error"));
                   }
                 }}><Trash2 className="h-4 w-4" /></Button>
               </div>
@@ -1896,8 +1946,8 @@ function EditExperienceDialog({ experience, userId, t, reload }: any) {
     }
 
     const itemId = f.id ?? (experience.id ?? experience.experience_id ?? experience._id);
-    if (!f.role?.trim()) return toast.error("Rôle requis");
-    if (!itemId) return toast.error("ID introuvable — rechargez la page");
+    if (!f.role?.trim()) return toast.error(t("prof_role_required"));
+    if (!itemId) return toast.error(t("prof_id_missing"));
     setLoading(true);
     try {
       const payload = {
@@ -1984,7 +2034,7 @@ function SkillsSection({ items, t, userId, reload }: any) {
       await awardXp(userId, 10, "added_skill");
       setOpen(false); setF({ name: "", category: "digital", level: 2 }); reload();
     } catch (err: any) {
-      toast.error(err.message || "Erreur lors de l'ajout");
+      toast.error(err.message || t("prof_error_add"));
     } finally {
       setLoading(false);
     }
@@ -2030,33 +2080,42 @@ function SkillsSection({ items, t, userId, reload }: any) {
           {Object.entries(grouped).map(([cat, list]) => (
             <div key={cat}>
               <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5"><Layers className="h-3 w-3" />{t(`prof_skill_cat_${cat}` as any)}</div>
-              <div className="flex flex-wrap gap-2">
+              <ul className="space-y-2">
                 {(list as Skill[]).map((s) => {
                   const v = ((s.validations as any)?.peer ?? 0) + ((s.validations as any)?.mentor ?? 0) + ((s.validations as any)?.org ?? 0);
                   return (
-                    <div key={(s as any).id ?? (s as any).skill_id ?? (s as any)._id ?? s.name} className={`group flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border ${skillLevelColor(s.level)}`}>
-                      <span className="font-medium">{s.name}</span>
-                      <span className="text-xs opacity-70">· {t(`prof_skill_lvl_${s.level}` as any)}</span>
-                      {v > 0 && <span className="text-xs text-success font-semibold">✓{v}</span>}
-                      <div className="opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity">
+                    <li key={(s as any).id ?? (s as any).skill_id ?? (s as any)._id ?? s.name} className="flex items-center justify-between gap-3 p-4 rounded-xl bg-muted/40 border border-border/40 hover:border-primary/20 transition-colors">
+                      <div className="flex gap-3 flex-1 min-w-0 items-center">
+                        <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${skillLevelIconClass(s.level)}`}>
+                          <Sparkles className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold truncate">{s.name}</div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-muted-foreground">{t(`prof_skill_lvl_${s.level}` as any)}</span>
+                            {v > 0 && <span className="text-xs text-success font-semibold">✓{v}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-1 shrink-0">
                         <EditSkillDialog skill={s} userId={userId} t={t} reload={reload} />
-                        <button onClick={async () => {
+                        <Button size="icon" variant="ghost" onClick={async () => {
                           const itemId = (s as any).id ?? (s as any).skill_id ?? (s as any)._id;
-                          if (!itemId) return toast.error("ID introuvable");
-                          if (!window.confirm("Supprimer cette compétence ?")) return;
+                          if (!itemId) return toast.error(t("prof_id_missing"));
+                          if (!window.confirm(t("prof_skill_confirm_delete"))) return;
                           try {
                             await profileAPI.deleteSkill(userId, itemId);
-                            toast.success("Compétence supprimée");
+                            toast.success(t("prof_skill_deleted"));
                             reload();
                           } catch (err: any) {
-                            toast.error(err.message || "Erreur lors de la suppression");
+                            toast.error(err.message || t("prof_delete_error"));
                           }
-                        }} className="hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
+                        }}><Trash2 className="h-4 w-4" /></Button>
                       </div>
-                    </div>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
             </div>
           ))}
         </div>
@@ -2078,8 +2137,8 @@ function EditSkillDialog({ skill, userId, t, reload }: any) {
   const cats = ["digital", "ai", "communication", "leadership", "entrepreneurship", "technical", "creative", "community", "language", "research", "pm"];
 
   const submit = async () => {
-    if (!f.name?.trim()) return toast.error("Nom de la compétence requis");
-    if (!f.id) return toast.error("ID introuvable — rechargez la page");
+    if (!f.name?.trim()) return toast.error(t("prof_skill_name_required"));
+    if (!f.id) return toast.error(t("prof_id_missing"));
     setLoading(true);
     try {
       await profileAPI.updateSkill(userId, f.id, {
@@ -2091,7 +2150,7 @@ function EditSkillDialog({ skill, userId, t, reload }: any) {
       setOpen(false);
       reload();
     } catch (err: any) {
-      toast.error(err.message || "Erreur lors de la mise à jour");
+      toast.error(err.message || t("prof_error_update"));
     } finally {
       setLoading(false);
     }
@@ -2099,7 +2158,7 @@ function EditSkillDialog({ skill, userId, t, reload }: any) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><button className="hover:text-primary"><Edit3 className="h-3 w-3" /></button></DialogTrigger>
+      <DialogTrigger asChild><Button size="icon" variant="ghost"><Edit3 className="h-4 w-4" /></Button></DialogTrigger>
       <DialogContent className="sm:max-w-md flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" />{t("prof_edit")} {t("prof_tab_skills")}</DialogTitle>
@@ -2161,7 +2220,7 @@ function EditPortfolioItemDialog({ item, userId, t, reload }: any) {
       setOpen(false);
       reload();
     } catch (err: any) {
-      toast.error(err.message || "Erreur lors de la mise à jour");
+      toast.error(err.message || t("prof_error_update"));
     } finally {
       setLoading(false);
     }
@@ -2244,7 +2303,7 @@ function AspirationsForm({ p, t, onSave, onClose }: any) {
       <h3 className="font-semibold flex items-center gap-2"><Target className="h-4 w-4 text-primary" />{t("prof_tab_aspirations")}</h3>
 
       <div className="space-y-3">
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><Target className="h-3.5 w-3.5" />Carrière de rêve</div>
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><Target className="h-3.5 w-3.5" />{t("prof_section_career")}</div>
         <Field label={t("prof_aspir_dream")}><Input value={f.dream_career} onChange={(e) => setF({ ...f, dream_career: e.target.value })} /></Field>
       </div>
 
@@ -2285,7 +2344,7 @@ function AspirationsForm({ p, t, onSave, onClose }: any) {
       </div>
 
       <div className="space-y-3">
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><Eye className="h-3.5 w-3.5" />Vision</div>
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><Eye className="h-3.5 w-3.5" />{t("prof_section_vision")}</div>
         <Field label={t("prof_aspir_vision")}><Textarea rows={3} value={f.future_vision} onChange={(e) => setF({ ...f, future_vision: e.target.value })} /></Field>
       </div>
 
@@ -2333,7 +2392,7 @@ function SocialLinksForm({ p, t, lang, onSave, onClose }: any) {
       <h3 className="font-semibold flex items-center gap-2"><Globe className="h-4 w-4 text-primary" />{t("prof_port_links")}</h3>
 
       <div className="space-y-3">
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Réseaux sociaux</div>
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("prof_section_social")}</div>
         <div className="grid sm:grid-cols-2 gap-3">
           <Field label={t("prof_port_linkedin")}>
             <div className="relative flex items-center">
@@ -2363,7 +2422,7 @@ function SocialLinksForm({ p, t, lang, onSave, onClose }: any) {
       </div>
 
       <div className="space-y-3">
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Médias & Documents</div>
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("prof_section_media")}</div>
         <div className="grid sm:grid-cols-2 gap-3">
           <Field label={t("prof_port_video")}>
             <div className="relative flex items-center">
@@ -2371,7 +2430,7 @@ function SocialLinksForm({ p, t, lang, onSave, onClose }: any) {
               <Input value={f.video} onChange={(e) => setF({ ...f, video: e.target.value })} className="pl-9" placeholder="https://youtu.be/…" />
             </div>
           </Field>
-          <Field label={lang === "fr" ? "Lien vers tes documents" : "Link to your documents"}>
+          <Field label={t("prof_doc_link")}>
             <div className="relative flex items-center">
               <FileText className="absolute left-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -2383,7 +2442,7 @@ function SocialLinksForm({ p, t, lang, onSave, onClose }: any) {
             </div>
             {f.doc_url && (
               <a href={f.doc_url} target="_blank" rel="noreferrer" className="text-xs text-primary underline flex items-center gap-1 mt-1">
-                <FileText className="h-3 w-3" />{lang === "fr" ? "Voir le document" : "View document"}
+                <FileText className="h-3 w-3" />{t("prof_doc_view")}
               </a>
             )}
           </Field>
@@ -2416,7 +2475,7 @@ function PortfolioSection({ items, t, userId, reload }: any) {
   const [loading, setLoading] = useState(false);
   const [f, setF] = useState<Port>({ title: "", kind: "project" });
   const submit = async () => {
-    if (!f.title?.trim()) return toast.error(t("prof_port_item_title") || "Portfolio title required");
+    if (!f.title?.trim()) return toast.error(t("prof_port_item_title"));
     setLoading(true);
     try {
       await profileAPI.addPortfolioItem(userId, { title: f.title.trim(), kind: f.kind, url: f.url || "", description: f.description || "" });
@@ -2425,7 +2484,7 @@ function PortfolioSection({ items, t, userId, reload }: any) {
       setF({ title: "", kind: "project" });
       reload();
     } catch (err: any) {
-      toast.error(err.message || "Erreur lors de l'ajout");
+      toast.error(err.message || t("prof_error_add"));
     } finally {
       setLoading(false);
     }
@@ -2446,7 +2505,7 @@ function PortfolioSection({ items, t, userId, reload }: any) {
                 <Select value={f.kind ?? "project"} onValueChange={(v) => setF({ ...f, kind: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {["project", "publication", "research", "impact"].map((k) => <SelectItem key={k} value={k}>{k}</SelectItem>)}
+                    {["project", "publication", "research", "impact"].map((k) => <SelectItem key={k} value={k}>{t(`prof_port_kind_${k}` as any)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </Field>
@@ -2464,25 +2523,44 @@ function PortfolioSection({ items, t, userId, reload }: any) {
         </Dialog>
       </div>
       {items.length === 0 ? <p className="text-sm text-muted-foreground">{t("prof_port_empty")}</p> : (
-        <div className="grid sm:grid-cols-2 gap-3">
+        <ul className="space-y-3">
           {items.map((p: Port) => (
-            <div key={p.id ?? (p as any)._id} className="rounded-xl border border-border/40 hover:border-primary/30 transition-colors group relative overflow-hidden">
-              {p.url ? <a href={p.url} target="_blank" rel="noreferrer" className="absolute inset-0 z-0" /> : null}
-              <div className="relative z-10 p-4">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${kindBadgeColor(p.kind)}`}>{p.kind ?? "project"}</Badge>
-                  <div className="opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity">
-                    <EditPortfolioItemDialog item={p} userId={userId} t={t} reload={reload} />
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={(e) => { e.preventDefault(); e.stopPropagation(); const itemId = p.id ?? (p as any)._id; if (!itemId) { toast.error("ID introuvable — rechargez la page"); return; } if (!window.confirm("Supprimer cet item ?")) return; (async () => { try { await profileAPI.deletePortfolioItem(userId, itemId); toast.success(t("prof_deleted") || "Supprimé"); reload(); } catch (err: any) { toast.error(err.message || "Erreur lors de la suppression"); } })(); }}><Trash2 className="h-3.5 w-3.5" /></Button>
-                  </div>
+            <li key={p.id ?? (p as any)._id} className="flex items-start justify-between gap-3 p-4 rounded-xl bg-muted/40 border border-border/40 hover:border-primary/20 transition-colors">
+              <div className="flex gap-3 flex-1 min-w-0">
+                <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <Layers className="h-4 w-4 text-primary" />
                 </div>
-                <div className="font-semibold">{p.title}</div>
-                {p.description && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{p.description}</p>}
-                {p.url && <div className="flex items-center gap-1 mt-2 text-xs text-primary"><Link2 className="h-3 w-3" />Voir le projet</div>}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                    <div className="font-semibold truncate">{p.title}</div>
+                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 shrink-0 ${kindBadgeColor(p.kind)}`}>{t(`prof_port_kind_${p.kind}` as any) || p.kind}</Badge>
+                  </div>
+                  {p.description && <p className="text-sm text-muted-foreground line-clamp-2">{p.description}</p>}
+                  {p.url && (
+                    <a href={p.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 mt-1 text-xs text-primary hover:underline">
+                      <Link2 className="h-3 w-3" />{t("prof_port_view")}
+                    </a>
+                  )}
+                </div>
               </div>
-            </div>
+              <div className="flex gap-1 shrink-0">
+                <EditPortfolioItemDialog item={p} userId={userId} t={t} reload={reload} />
+                <Button size="icon" variant="ghost" onClick={async () => {
+                  const itemId = p.id ?? (p as any)._id;
+                  if (!itemId) { toast.error(t("prof_id_missing")); return; }
+                  if (!window.confirm(t("prof_skill_confirm_delete"))) return;
+                  try {
+                    await profileAPI.deletePortfolioItem(userId, itemId);
+                    toast.success(t("prof_deleted") || "Supprimé");
+                    reload();
+                  } catch (err: any) {
+                    toast.error(err.message || t("prof_delete_error"));
+                  }
+                }}><Trash2 className="h-4 w-4" /></Button>
+              </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </Card>
   );

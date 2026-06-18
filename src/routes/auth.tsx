@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthProvider";
 import { toast } from "sonner";
 import { Logo } from "@/components/asuka/Logo";
 import { LanguageSwitcher } from "@/components/asuka/LanguageSwitcher";
+import { ThemeToggle } from "@/components/asuka/ThemeToggle";
 import { CountryPhoneSelector, type Country } from "@/components/asuka/CountryPhoneSelector";
 
 export const Route = createFileRoute("/auth")({
@@ -65,9 +66,15 @@ function AuthPage() {
         // Après signup réussi, l'utilisateur verra un message pour vérifier son email
         nav({ to: "/auth/check-email?email=" + encodeURIComponent(email) });
       } else if (mode === "signin") {
-        await signin(email, password);
+        const { user: signedInUser } = await signin(email, password);
         toast.success(t("auth_signin_success") || "Connexion réussie");
-        nav({ to: "/dashboard" });
+        if (signedInUser.adminRole) {
+          nav({ to: "/admin/dashboard" });
+        } else if (!signedInUser.onboarded) {
+          nav({ to: "/onboarding" });
+        } else {
+          nav({ to: "/dashboard" });
+        }
       }
     } catch (err: any) {
       if (mode === "signin") {
@@ -86,7 +93,10 @@ function AuthPage() {
       <div className="absolute inset-0 bg-gradient-aurora pointer-events-none" />
       <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
         <Logo />
-        <LanguageSwitcher />
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <LanguageSwitcher />
+        </div>
       </div>
       <Card className="relative w-full max-w-md p-8 glass border-border/50 shadow-glow">
         <h1 className="text-2xl font-bold">
@@ -149,11 +159,11 @@ function AuthPage() {
               {mode === "signin" && signinError && (
                 <div className="text-center">
                   <p className="text-xs text-red-500 mb-2">{signinError}</p>
-                  <Link 
+                  <Link
                     to="/auth/forgot-password"
                     className="text-xs text-blue-600 hover:text-blue-700 hover:underline"
                   >
-                    Mot de passe oublié ?
+                    {t("auth_forgot_password")}
                   </Link>
                 </div>
               )}

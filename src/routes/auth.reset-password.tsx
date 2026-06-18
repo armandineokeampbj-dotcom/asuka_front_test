@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { API_BASE_URL } from '@/lib/api';
 import { Logo } from '@/components/asuka/Logo';
 import { LanguageSwitcher } from '@/components/asuka/LanguageSwitcher';
+import { useLang } from '@/i18n/LanguageProvider';
 
 interface ResetPasswordSearch {
   token?: string;
@@ -22,6 +23,7 @@ export const Route = createFileRoute('/auth/reset-password')({
 
 function ResetPassword() {
   const navigate = useNavigate();
+  const { t } = useLang();
   const search = useSearch({ from: Route.id });
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -30,25 +32,21 @@ function ResetPassword() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
 
-  // Vérifier que le token est fourni
   useEffect(() => {
     if (!search.token) {
-      toast.error('Token invalide ou manquant');
+      toast.error(t('reset_token_missing'));
       navigate({ to: '/auth/forgot-password' });
     }
   }, [search.token, navigate]);
 
-  // Calculer la force du mot de passe
   const calculatePasswordStrength = (password: string) => {
     let strength = 0;
-    
     if (password.length >= 8) strength += 25;
     if (password.length >= 12) strength += 25;
     if (/[a-z]/.test(password)) strength += 12;
     if (/[A-Z]/.test(password)) strength += 12;
     if (/[0-9]/.test(password)) strength += 13;
     if (/[!@#$%^&*]/.test(password)) strength += 13;
-
     setPasswordStrength(Math.min(strength, 100));
   };
 
@@ -65,26 +63,26 @@ function ResetPassword() {
   };
 
   const getPasswordStrengthText = () => {
-    if (passwordStrength < 40) return 'Faible';
-    if (passwordStrength < 70) return 'Moyen';
-    return 'Fort';
+    if (passwordStrength < 40) return t('reset_strength_weak');
+    if (passwordStrength < 70) return t('reset_strength_medium');
+    return t('reset_strength_strong');
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!newPassword || !confirmPassword) {
-      toast.error('Veuillez remplir tous les champs');
+      toast.error(t('reset_fill_all'));
       return;
     }
 
     if (newPassword.length < 8) {
-      toast.error('Le mot de passe doit contenir au moins 8 caractères');
+      toast.error(t('reset_min_8'));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      toast.error('Les mots de passe ne correspondent pas');
+      toast.error(t('reset_mismatch'));
       return;
     }
 
@@ -105,9 +103,8 @@ function ResetPassword() {
       const data = await response.json();
 
       if (!response.ok) {
-        toast.error(data.error?.message || data.message || 'Une erreur est survenue');
-        
-        // Si le token est expiré, rediriger vers forgot-password
+        toast.error(data.error?.message || data.message || t('error_occurred'));
+
         if (data.error?.code === 'TOKEN_EXPIRED') {
           setTimeout(() => {
             navigate({ to: '/auth/forgot-password' });
@@ -116,14 +113,13 @@ function ResetPassword() {
         return;
       }
 
-      toast.success('Votre mot de passe a été réinitialisé avec succès');
+      toast.success(t('reset_success'));
 
-      // Afficher un message de succès avec animation
       setTimeout(() => {
         navigate({ to: '/auth?mode=signin' });
       }, 3000);
     } catch (error) {
-      toast.error('Erreur de connexion au serveur');
+      toast.error(t('network_error'));
       console.error('Reset password error:', error);
     } finally {
       setLoading(false);
@@ -132,7 +128,6 @@ function ResetPassword() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50 p-4">
-      {/* Header avec Logo et LanguageSwitcher */}
       <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between">
         <Logo />
         <LanguageSwitcher />
@@ -140,7 +135,6 @@ function ResetPassword() {
 
       <div className="w-full max-w-md mt-12">
         <div className="bg-white rounded-lg shadow-lg p-8 border border-gray-100">
-          {/* En-tête */}
           <div className="mb-8">
             <div className="flex items-center justify-center mb-4">
               <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
@@ -150,25 +144,23 @@ function ResetPassword() {
               </div>
             </div>
             <h1 className="text-3xl font-bold text-gray-900 text-center mb-2">
-              Réinitialiser le mot de passe
+              {t('reset_title')}
             </h1>
             <p className="text-gray-600 text-center text-sm">
-              Créez un nouveau mot de passe sécurisé pour votre compte
+              {t('reset_subtitle')}
             </p>
           </div>
 
-          {/* Formulaire */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Nouveau mot de passe */}
             <div>
               <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-2">
-                Nouveau mot de passe
+                {t('reset_new_pwd')}
               </label>
               <div className="relative">
                 <Input
                   id="new-password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Entrez un mot de passe sécurisé"
+                  placeholder={t('reset_new_pwd_placeholder')}
                   value={newPassword}
                   onChange={handlePasswordChange}
                   disabled={loading}
@@ -195,11 +187,10 @@ function ResetPassword() {
                 </button>
               </div>
 
-              {/* Indicateur de force */}
               {newPassword && (
                 <div className="mt-3">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-gray-600">Force du mot de passe:</span>
+                    <span className="text-xs text-gray-600">{t('reset_strength')}</span>
                     <span className={`text-xs font-semibold ${
                       passwordStrength < 40 ? 'text-red-600' :
                       passwordStrength < 70 ? 'text-yellow-600' :
@@ -215,24 +206,23 @@ function ResetPassword() {
                     />
                   </div>
                   <p className="mt-2 text-xs text-gray-500">
-                    • Au moins 8 caractères<br />
-                    • Majuscules et minuscules<br />
-                    • Chiffres et caractères spéciaux
+                    {t('reset_criteria_1')}<br />
+                    {t('reset_criteria_2')}<br />
+                    {t('reset_criteria_3')}
                   </p>
                 </div>
               )}
             </div>
 
-            {/* Confirmer le mot de passe */}
             <div>
               <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-2">
-                Confirmer le mot de passe
+                {t('reset_confirm_pwd')}
               </label>
               <div className="relative">
                 <Input
                   id="confirm-password"
                   type={showConfirm ? 'text' : 'password'}
-                  placeholder="Confirmez votre mot de passe"
+                  placeholder={t('reset_confirm_placeholder')}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   disabled={loading}
@@ -260,30 +250,28 @@ function ResetPassword() {
               </div>
               {confirmPassword && newPassword !== confirmPassword && (
                 <p className="mt-2 text-xs text-red-600">
-                  Les mots de passe ne correspondent pas
+                  {t('reset_mismatch')}
                 </p>
               )}
             </div>
 
-            {/* Bouton de soumission */}
             <Button
               type="submit"
               disabled={loading || !newPassword || !confirmPassword || newPassword !== confirmPassword || newPassword.length < 8}
               className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-2 rounded-lg transition duration-300"
             >
-              {loading ? 'Réinitialisation en cours...' : 'Réinitialiser le mot de passe'}
+              {loading ? t('reset_submitting') : t('reset_submit')}
             </Button>
           </form>
 
-          {/* Lien vers connexion */}
           <div className="mt-6 text-center">
             <p className="text-gray-600">
-              Vous avez retrouvé votre mot de passe ?{' '}
+              {t('reset_remember')}{' '}
               <button
                 onClick={() => navigate({ to: '/auth?mode=signin' })}
                 className="text-purple-600 hover:text-purple-700 font-semibold"
               >
-                Se connecter
+                {t('forgot_back_signin')}
               </button>
             </p>
           </div>

@@ -54,11 +54,79 @@ export async function apiCall<T = any>(
 }
 
 /**
+ * Download a file from an authenticated endpoint, triggering browser save-as dialog
+ */
+export async function apiDownload(endpoint: string, fallbackFilename: string): Promise<void> {
+  const token = getAuthToken();
+  const url = new URL(endpoint, API_BASE);
+  const headers = new Headers();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  const response = await fetch(url.toString(), { headers });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ message: response.statusText }));
+    throw new Error(err.message || `Download error: ${response.status}`);
+  }
+
+  // Try to extract filename from Content-Disposition
+  const cd = response.headers.get("Content-Disposition") ?? "";
+  const match = cd.match(/filename\*=UTF-8''([^;]+)/) || cd.match(/filename="([^"]+)"/);
+  const filename = match ? decodeURIComponent(match[1]) : fallbackFilename;
+
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(objectUrl);
+}
+
+/**
  * Rewards API
  */
 export const rewardsAPI = {
   getRewards: () => apiCall("/api/rewards"),
   getStats: () => apiCall("/api/rewards/stats"),
+};
+
+/**
+ * Public Surveys API — no auth required, works for both anon and logged-in users
+ */
+export type SurveyResponseBody = {
+  answers: Record<string, string>;
+  dob?: string;
+  gender?: string;
+  respondent?: { name: string; firstname: string; email: string; phone: string };
+};
+
+export const publicSurveysAPI = {
+  getSurvey: (id: string) => apiCall(`/api/surveys/public/${id}`),
+  submitResponse: (id: string, body: SurveyResponseBody) =>
+    apiCall(`/api/surveys/public/${id}/responses`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateResponse: (id: string, body: SurveyResponseBody) =>
+    apiCall(`/api/surveys/public/${id}/responses`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+};
+
+/**
+ * Surveys (Voice) API
+ */
+export const surveysAPI = {
+  getSurveys: () => apiCall("/api/surveys"),
+  getResponses: () => apiCall("/api/surveys/responses"),
+  submitResponse: (id: string, answers: Record<string, string>) =>
+    apiCall(`/api/surveys/${id}/responses`, {
+      method: "POST",
+      body: JSON.stringify({ answers }),
+    }),
 };
 
 /**
@@ -280,6 +348,12 @@ export const opportunitiesAPI = {
       method: "POST",
       body: JSON.stringify({}),
     }),
+  viewOpportunity: (id: string) =>
+    apiCall(`/api/opportunities/${id}/view`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    }),
+  getSavedOpportunities: () => apiCall("/api/opportunities/saved"),
 };
 
 /**
@@ -312,6 +386,11 @@ export const adminAPI = {
     apiCall(`/api/admin/surveys/${id}`, {
       method: "DELETE",
     }),
+  getSurveyResponses: (id: string) => apiCall(`/api/admin/surveys/${id}/responses`),
+  deleteSurveyResponse: (surveyId: string, responseId: string) =>
+    apiCall(`/api/admin/surveys/${surveyId}/responses/${responseId}`, { method: "DELETE" }),
+  exportSurveyXlsx: (id: string, surveyName: string) =>
+    apiDownload(`/api/admin/surveys/${id}/export-xlsx`, `Sondage_${surveyName}.xlsx`),
 
   // Users
   getUsers: () => apiCall("/api/admin/users"),
@@ -333,6 +412,11 @@ export const adminAPI = {
     apiCall(`/api/admin/opportunities/${id}`, {
       method: "PUT",
       body: JSON.stringify({ status }),
+    }),
+  updateOpportunity: (id: string, data: any) =>
+    apiCall(`/api/admin/opportunities/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
     }),
   deleteOpportunity: (id: string) =>
     apiCall(`/api/admin/opportunities/${id}`, {
@@ -482,6 +566,56 @@ export const coachAPI = {
     }),
 };
 
+/**
+ * Auth extras — vérification email admin + changement de mot de passe
+ */
+export const authExtrasAPI = {
+  verifyAdminEmail: (token: string) =>
+    apiCall<{ success: boolean; email: string; role: string; mustChangePassword: boolean }>(
+      `/api/auth/verify-email?token=${encodeURIComponent(token)}`
+    ),
+  changePassword: (data: { newPassword: string; currentPassword?: string }) =>
+    apiCall("/api/auth/change-password", { method: "POST", body: JSON.stringify(data) }),
+  completeProfileFlag: (data: { firstName?: string; lastName?: string }) =>
+    apiCall("/api/auth/complete-profile-flag", { method: "PATCH", body: JSON.stringify(data) }),
+};
+
+/**
+ * Admin Team API — gestion hiérarchique des admins B et collaborateurs C
+ */
+export const adminTeamAPI = {
+  // Super Admins (lecture seule)
+  getSuperAdmins: () => apiCall("/api/admin/team/super-admins"),
+
+  // Admins B
+  getAdminsB: () => apiCall("/api/admin/team/admins-b"),
+  createAdminB: (data: { email: string; password: string }) =>
+    apiCall("/api/admin/team/admins-b", { method: "POST", body: JSON.stringify(data) }),
+  updateAdminB: (id: string, data: Partial<{ firstName: string; lastName: string; email: string }>) =>
+    apiCall(`/api/admin/team/admins-b/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  setAdminBStatus: (id: string, status: "active" | "blocked") =>
+    apiCall(`/api/admin/team/admins-b/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  deleteAdminB: (id: string) =>
+    apiCall(`/api/admin/team/admins-b/${id}`, { method: "DELETE" }),
+
+  // Collaborateurs C
+  getCollaborators: () => apiCall("/api/admin/team/collaborators"),
+  createCollaborator: (data: {
+    email: string; password: string;
+    permissions: "editor" | "reader"; parentAdminId?: string;
+  }) => apiCall("/api/admin/team/collaborators", { method: "POST", body: JSON.stringify(data) }),
+  updateCollaborator: (id: string, data: Partial<{ firstName: string; lastName: string; email: string; permissions: "editor" | "reader" }>) =>
+    apiCall(`/api/admin/team/collaborators/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  setCollaboratorStatus: (id: string, status: "active" | "blocked") =>
+    apiCall(`/api/admin/team/collaborators/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  deleteCollaborator: (id: string) =>
+    apiCall(`/api/admin/team/collaborators/${id}`, { method: "DELETE" }),
+
+  // Logs paginés
+  getLogs: (params?: { page?: number; limit?: number; adminId?: string; action?: string }) =>
+    apiCall("/api/admin/team/logs", { params: params as any }),
+};
+
 export default {
   rewardsAPI,
   pulsesAPI,
@@ -491,6 +625,7 @@ export default {
   opportunitiesAPI,
   storageAPI,
   adminAPI,
+  adminTeamAPI,
   coachAPI,
   apiCall,
 };

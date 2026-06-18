@@ -37,17 +37,30 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
   }, [lang]);
 
-  const t = (key: string): string => {
+  // Apply RTL and html lang when language changes
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+  }, [lang]);
+
+  const lookup = (langBlock: any, key: string): string | undefined => {
     const keys = key.split(".");
-    let value: any = translations[lang];
+    let value: any = langBlock;
     for (const k of keys) {
       if (value && typeof value === "object" && k in value) {
         value = value[k];
       } else {
-        return key; // Return key if translation not found
+        return undefined;
       }
     }
-    return typeof value === "string" ? value : key;
+    return typeof value === "string" ? value : undefined;
+  };
+
+  const t = (key: string): string => {
+    // Try current language first, then fall back to EN, then return key
+    return lookup(translations[lang], key)
+      ?? lookup(translations["en"], key)
+      ?? key;
   };
 
   const tArray = (key: string): string[] => {
@@ -57,7 +70,14 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       if (value && typeof value === "object" && k in value) {
         value = value[k];
       } else {
-        return [];
+        // Fallback to EN for arrays
+        let enValue: any = translations["en"];
+        for (const ek of keys) {
+          if (enValue && typeof enValue === "object" && ek in enValue) {
+            enValue = enValue[ek];
+          } else return [];
+        }
+        return Array.isArray(enValue) ? enValue : [];
       }
     }
     return Array.isArray(value) ? value : [];

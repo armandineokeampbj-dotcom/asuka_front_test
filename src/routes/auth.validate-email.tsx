@@ -3,70 +3,100 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthProvider";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/asuka/Logo";
 import { LanguageSwitcher } from "@/components/asuka/LanguageSwitcher";
+import { Loader2 } from "lucide-react";
 import { useLang } from "@/i18n/LanguageProvider";
 
 export const Route = createFileRoute("/auth/validate-email")({
   component: ValidateEmailPage,
 });
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+
 function ValidateEmailPage() {
   const { t } = useLang();
   const { setAuthData } = useAuth();
   const nav = useNavigate();
   const searchParams = useSearch({ from: "/auth/validate-email" });
+
+  const token = (searchParams as any).token as string | undefined;
+  const role = (searchParams as any).role as string | undefined; // 'admin' ou undefined
+
   const [validating, setValidating] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null); // 'TOKEN_EXPIRED' ou message texte
   const [message, setMessage] = useState<string>("");
+
+  // États renvoi de lien
+  const [resendEmail, setResendEmail] = useState("");
+  const [resendBusy, setResendBusy] = useState(false);
+  const [resendDone, setResendDone] = useState(false);
 
   useEffect(() => {
     validateEmail();
   }, []);
 
   const validateEmail = async () => {
-    try {
-      const token = (searchParams as any).token;
+    if (!token) {
+      setError(t("auth_invalid_link") || "Lien de validation invalide");
+      setValidating(false);
+      return;
+    }
 
-      if (!token) {
-        setError(t("auth_invalid_link") || "Lien de validation invalide");
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/auth/validate-email-link?token=${encodeURIComponent(token)}`,
+        { method: "GET" }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.error?.code === "TOKEN_EXPIRED") {
+          setError("TOKEN_EXPIRED");
+        } else {
+          setError(data.error?.message || t("auth_validation_failed") || "Validation échouée");
+        }
         setValidating(false);
         return;
       }
 
-      // Appeler l'API pour valider le lien
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:4000";
-      const response = await fetch(
-        `${apiUrl}/api/auth/validate-email-link?token=${encodeURIComponent(token)}`,
-        {
-          method: "GET",
-        }
-      );
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error?.message || "Email validation failed");
-      }
-
-      const data = await response.json();
-
-      // Mettre à jour l'authentification via le contexte
       if (data.token && data.user) {
         setAuthData(data.token, data.user);
+        const successMsg = data.message || t("auth_email_verified") || "Email vérifié avec succès";
+        setMessage(successMsg);
+        toast.success(successMsg);
 
-        setMessage(data.message || "Email verified successfully!");
-        toast.success(t("auth_email_verified") || "Email vérifié avec succès");
-
-        // Rediriger au dashboard après un court délai
         setTimeout(() => {
-          nav({ to: "/dashboard" });
+          if (data.isAdmin || role === "admin") {
+            nav({ to: "/admin/dashboard" as any });
+          } else {
+            nav({ to: "/dashboard" });
+          }
         }, 2000);
       }
     } catch (err: any) {
-      const errorMsg = err.message || "Validation failed";
-      setError(errorMsg);
-      toast.error(errorMsg);
+      setError(err.message || t("auth_validation_failed") || "Validation échouée");
       setValidating(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!resendEmail.trim() || resendBusy) return;
+    setResendBusy(true);
+    try {
+      await fetch(`${API_BASE}/api/auth/resend-verification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: resendEmail.trim() }),
+      });
+      setResendDone(true);
+    } catch {
+      setResendDone(true); // toujours afficher succès (sécurité)
+    } finally {
+      setResendBusy(false);
     }
   };
 
@@ -81,9 +111,7 @@ function ValidateEmailPage() {
       <Card className="relative w-full max-w-md p-8 glass border-border/50 shadow-glow">
         {validating ? (
           <div className="text-center space-y-4">
-            <div className="animate-spin">
-              <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto" />
-            </div>
+            <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
             <h1 className="text-2xl font-bold">
               {t("auth_validating_email") || "Vérification de votre email..."}
             </h1>
@@ -91,6 +119,45 @@ function ValidateEmailPage() {
               {t("auth_please_wait") || "Veuillez patienter..."}
             </p>
           </div>
+
+        ) : error === "TOKEN_EXPIRED" ? (
+          <div className="text-center space-y-4">
+            <div className="text-5xl">⏰</div>
+            <h1 className="text-2xl font-bold">{t("auth_token_expired")}</h1>
+            <p className="text-sm text-muted-foreground">
+              {t("auth_token_expired_desc")}
+            </p>
+            <div className="space-y-3 mt-4">
+              <Input
+                type="email"
+                placeholder="votre@email.com"
+                value={resendEmail}
+                onChange={(e) => setResendEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleResend()}
+                disabled={resendDone}
+              />
+              <Button
+                onClick={handleResend}
+                disabled={!resendEmail.trim() || resendBusy || resendDone}
+                className="w-full bg-gradient-hero"
+              >
+                {resendBusy && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                {resendDone ? t("auth_resend_done") : t("auth_resend_submit")}
+              </Button>
+              {resendDone && (
+                <p className="text-sm text-muted-foreground">
+                  {t("auth_check_spam")}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => nav({ to: role === "admin" ? "/login-admin" : "/auth" })}
+              className="text-xs text-muted-foreground hover:text-foreground mt-4 block mx-auto"
+            >
+              ← {role === "admin" ? t("auth_back_admin") : t("auth_back_to_signin")}
+            </button>
+          </div>
+
         ) : error ? (
           <div className="text-center space-y-4">
             <h1 className="text-2xl font-bold text-destructive">
@@ -98,25 +165,29 @@ function ValidateEmailPage() {
             </h1>
             <p className="text-sm text-muted-foreground">{error}</p>
             <button
-              onClick={() => nav({ to: "/auth" })}
+              onClick={() => nav({ to: role === "admin" ? "/login-admin" : "/auth" })}
               className="mt-6 px-4 py-2 bg-gradient-hero rounded-md text-white font-medium hover:opacity-90"
             >
-              {t("auth_back_to_signin") || "Retour à la connexion"}
+              {role === "admin" ? t("auth_back_admin") : t("auth_back_to_signin") || "Retour à la connexion"}
             </button>
           </div>
+
         ) : (
           <div className="text-center space-y-4">
+            <div className="text-5xl">✅</div>
             <h1 className="text-2xl font-bold text-green-600">
-              {t("auth_validation_success") || "Email vérifié!"}
+              {t("auth_validation_success") || "Email vérifié !"}
             </h1>
             <p className="text-sm text-muted-foreground">{message}</p>
             <p className="text-xs text-muted-foreground">
-              {t("auth_redirecting") || "Redirection vers le tableau de bord..."}
+              {role === "admin"
+                ? t("auth_admin_redirecting")
+                : t("auth_redirecting") || "Redirection vers le tableau de bord..."}
             </p>
           </div>
         )}
 
-        <div className="mt-4 text-center">
+        <div className="mt-6 text-center">
           <a href="/" className="text-xs text-muted-foreground hover:text-foreground">
             ← Asuka One
           </a>

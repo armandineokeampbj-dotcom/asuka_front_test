@@ -57,17 +57,14 @@ export async function callProfileAI(payload: {
   return resp.json();
 }
 
-/** POST /api/profile-import — auto-fill profile from text or fileId */
-export async function callProfileImport(payload: {
-  text?: string;
-  fileId?: string;
-  lang?: string;
-}): Promise<{ summary: any }> {
+/** POST /api/profile-import — auto-fill profile from file or text (multipart) */
+export async function callProfileImport(formData: FormData): Promise<{ summary: any }> {
   const headers = await authHeaders();
+  // No Content-Type header — let the browser set multipart/form-data with boundary
   const resp = await fetch(`${BASE}/api/profile-import`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...headers },
-    body: JSON.stringify(payload),
+    headers,
+    body: formData,
   });
   if (!resp.ok) {
     const text = await resp.text();

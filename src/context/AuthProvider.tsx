@@ -8,8 +8,18 @@ export interface User {
   language: "fr" | "en";
   isVerified: boolean;
   isEmailVerified: boolean;
-  role: "user" | "admin";
+  role: "user" | "admin_super" | "admin_b" | "collaborator_c";
   onboarded: boolean;
+  // Admin fields — extracted from JWT
+  adminRole?: "super_admin" | "admin_b" | "collaborator_c" | null;
+  permissions?: "editor" | "reader" | null;
+  parentAdminId?: string | null;
+  adminProfileId?: string | null;
+  // First-login flags
+  mustChangePassword?: boolean;
+  mustCompleteProfile?: boolean;
+  // Dual-space flag
+  hasUserProfile?: boolean;
 }
 
 export interface AuthContextType {
@@ -22,6 +32,8 @@ export interface AuthContextType {
   verifyOTP: (email: string, otp: string) => Promise<{ token: string; user: User }>;
   resendOTP: (email: string) => Promise<void>;
   setAuthData: (token: string, user: User) => void;
+  updateUserFlags: (flags: Partial<Pick<User, "mustChangePassword" | "mustCompleteProfile">>) => void;
+  updateUser: (partial: Partial<User>) => void;
   signOut: () => void;
   error: string | null;
 }
@@ -32,16 +44,35 @@ const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
 const TOKEN_KEY = "asuka_token";
 const USER_KEY = "asuka_user";
 
-/**
- * AuthProvider - Handles authentication with backend JWT
- */
+function decodeJWTPayload(token: string): Record<string, any> {
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(atob(base64));
+  } catch {
+    return {};
+  }
+}
+
+function mergeAdminFields(userData: User, token: string): User {
+  const payload = decodeJWTPayload(token);
+  return {
+    ...userData,
+    adminRole: payload.adminRole ?? null,
+    permissions: payload.permissions ?? null,
+    parentAdminId: payload.parentAdminId ?? null,
+    adminProfileId: payload.adminProfileId ?? null,
+    mustChangePassword: payload.mustChangePassword ?? userData.mustChangePassword ?? false,
+    mustCompleteProfile: payload.mustCompleteProfile ?? userData.mustCompleteProfile ?? false,
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize auth state from localStorage
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -49,17 +80,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const storedUser = localStorage.getItem(USER_KEY);
 
         if (storedToken && storedUser) {
-          // Verify token is still valid by fetching user
           const response = await fetch(`${API_BASE}/api/auth/me`, {
             headers: { Authorization: `Bearer ${storedToken}` },
           });
 
           if (response.ok) {
             const data = await response.json();
+            const userWithAdmin = mergeAdminFields(data.user, storedToken);
             setToken(storedToken);
-            setUser(data.user);
+            setUser(userWithAdmin);
           } else {
-            // Token invalid, clear storage
             localStorage.removeItem(TOKEN_KEY);
             localStorage.removeItem(USER_KEY);
             setToken(null);
@@ -90,7 +120,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setError(null);
 
-      // Step 1: Create account and send OTP
       const signupResponse = await fetch(`${API_BASE}/api/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -111,8 +140,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const signupData = await signupResponse.json();
 
-      // User needs to verify OTP - return null to indicate next step
-      // Frontend should prompt for OTP
       return {
         token: "",
         user: {
@@ -152,15 +179,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const data = await response.json();
       const { token: newToken, user: userData } = data;
+      const userWithAdmin = mergeAdminFields(userData, newToken);
 
-      // Store token and user
       localStorage.setItem(TOKEN_KEY, newToken);
-      localStorage.setItem(USER_KEY, JSON.stringify(userData));
-
+      localStorage.setItem(USER_KEY, JSON.stringify(userWithAdmin));
       setToken(newToken);
-      setUser(userData);
+      setUser(userWithAdmin);
 
-      return { token: newToken, user: userData };
+      return { token: newToken, user: userWithAdmin };
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Vérification OTP échouée";
       setError(errorMsg);
@@ -179,7 +205,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (response.status === 403) {
-        // Email not verified - need OTP
         const err = await response.json();
         throw new Error(err.error?.message || "Vérification d'email requise");
       }
@@ -192,15 +217,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const data = await response.json();
       const { token: newToken, user: userData } = data;
+      const userWithAdmin = mergeAdminFields(userData, newToken);
 
-      // Store token and user
       localStorage.setItem(TOKEN_KEY, newToken);
-      localStorage.setItem(USER_KEY, JSON.stringify(userData));
-
+      localStorage.setItem(USER_KEY, JSON.stringify(userWithAdmin));
       setToken(newToken);
-      setUser(userData);
+      setUser(userWithAdmin);
 
-      return { token: newToken, user: userData };
+      return { token: newToken, user: userWithAdmin };
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Connexion échouée";
       setError(errorMsg);
@@ -230,16 +254,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  /**
-   * Définit les données d'authentification (token et user)
-   * Utilisé par les pages de validation d'email pour authentifier l'utilisateur
-   */
   const setAuthData = (token: string, user: User) => {
+    const userWithAdmin = mergeAdminFields(user, token);
     localStorage.setItem(TOKEN_KEY, token);
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    localStorage.setItem(USER_KEY, JSON.stringify(userWithAdmin));
     setToken(token);
-    setUser(user);
+    setUser(userWithAdmin);
     setError(null);
+  };
+
+  const updateUserFlags = (flags: Partial<Pick<User, "mustChangePassword" | "mustCompleteProfile">>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...flags };
+      localStorage.setItem(USER_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const updateUser = (partial: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...partial };
+      localStorage.setItem(USER_KEY, JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const signOut = () => {
@@ -249,14 +288,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setError(null);
 
-    // Optional: Call logout endpoint
     if (token) {
       fetch(`${API_BASE}/api/auth/logout`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
-      }).catch(() => {
-        // Ignore errors - user is already logged out locally
-      });
+      }).catch(() => {});
     }
   };
 
@@ -271,18 +307,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       verifyOTP,
       resendOTP,
       setAuthData,
+      updateUserFlags,
+      updateUser,
       signOut,
       error,
     }),
-    [user, token, loading, signup, signin, verifyOTP, resendOTP, setAuthData, signOut, error]
+    [user, token, loading, signup, signin, verifyOTP, resendOTP, setAuthData, updateUserFlags, updateUser, signOut, error]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-/**
- * Hook to use auth context
- */
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (!context) {
@@ -291,16 +326,10 @@ export function useAuth(): AuthContextType {
   return context;
 }
 
-/**
- * Get the current token for API calls
- */
 export function getAuthToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
-/**
- * Helper to make authenticated API calls
- */
 export async function fetchWithAuth(
   url: string,
   options: RequestInit = {}
@@ -312,8 +341,5 @@ export async function fetchWithAuth(
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  return fetch(url, {
-    ...options,
-    headers,
-  });
+  return fetch(url, { ...options, headers });
 }

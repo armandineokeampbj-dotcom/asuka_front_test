@@ -1,6 +1,17 @@
 <!doctype html>
 <html lang="fr">
   <head>
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("asuka-theme");
+          var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (t === "dark" || (!t && prefersDark)) {
+            document.documentElement.classList.add("dark");
+          }
+        } catch (e) {}
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asuka One — Transformez votre potentiel en opportunités</title>

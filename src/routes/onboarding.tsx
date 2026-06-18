@@ -93,11 +93,11 @@ function Onboarding() {
       }
       
       setBusy(false);
-      toast.success(lang === "fr" ? "Identité révélée ✨" : "Identity revealed ✨");
+      toast.success(t("onb_success"));
       nav({ to: "/dashboard" });
     } catch (err: any) {
       setBusy(false);
-      toast.error(err.message || (lang === "fr" ? "Erreur lors de l'onboarding" : "Onboarding error"));
+      toast.error(err.message || t("onb_error"));
     }
   };
 
@@ -114,14 +114,14 @@ function Onboarding() {
   ];
   const skillOpts = ["Communication","Leadership","Design","Coding","Data","Marketing","Sales","Writing","Public speaking","Teamwork"];
   const interestOpts = [
-    { v: "tech", l: lang==="fr"?"Tech":"Tech" },
+    { v: "tech", l: "Tech" },
     { v: "ai", l: "IA / AI" },
-    { v: "climate", l: lang==="fr"?"Climat":"Climate" },
-    { v: "health", l: lang==="fr"?"Santé":"Health" },
-    { v: "education", l: lang==="fr"?"Éducation":"Education" },
-    { v: "arts", l: lang==="fr"?"Arts":"Arts" },
+    { v: "climate", l: t("onb_interest_climate") },
+    { v: "health", l: t("onb_interest_health") },
+    { v: "education", l: t("onb_interest_education") },
+    { v: "arts", l: "Arts" },
     { v: "finance", l: "Finance" },
-    { v: "agriculture", l: lang==="fr"?"Agriculture":"Agriculture" },
+    { v: "agriculture", l: "Agriculture" },
   ];
 
   return (

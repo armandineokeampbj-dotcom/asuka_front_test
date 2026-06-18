@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthProvider";
 import { useEffect, useState } from "react";
 import { profileAPI } from "@/lib/api-client";
 import { generateAICoachContent, type UserProfile } from "@/lib/asuka-actions";
+import { computeCompletion } from "@/lib/profile-completion";
 import heroIllustration from "@/assets/hero-illustration.png";
 
 export const Route = createFileRoute("/")({
@@ -28,6 +29,9 @@ function Landing() {
     recommendation: "",
     scoreTarget: 86,
   });
+  const [profileScore, setProfileScore] = useState(0);
+  const [promoIdx, setPromoIdx] = useState(0);
+  const [fade, setFade] = useState(true);
 
   // Fetch user profile and generate personalized AI Coach content
   useEffect(() => {
@@ -37,20 +41,36 @@ function Landing() {
           const profile = await profileAPI.getProfile(user.id);
           const content = generateAICoachContent(profile as Partial<UserProfile>, lang as "en" | "fr");
           setAiCoachContent(content);
-        } else {
-          // Use default content for non-authenticated users
-          const content = generateAICoachContent(null, lang as "en" | "fr");
-          setAiCoachContent(content);
+          const { score } = computeCompletion({
+            profile: profile as any,
+            educationCount: (profile as any)?.education?.length ?? 0,
+            experienceCount: (profile as any)?.experiences?.length ?? 0,
+            skillsCount: (profile as any)?.skills?.length ?? 0,
+            certificationsCount: (profile as any)?.certifications?.length ?? 0,
+            portfolioCount: (profile as any)?.portfolio?.length ?? 0,
+          });
+          setProfileScore(score);
         }
-      } catch (error) {
-        // Fallback to default content
-        const content = generateAICoachContent(null, lang as "en" | "fr");
-        setAiCoachContent(content);
+      } catch {
+        // silent — promo carousel shown when no profile
       }
     };
-
     loadAICoachContent();
   }, [user, lang]);
+
+  // Carousel rotation every 15s when not logged in
+  useEffect(() => {
+    if (user) return;
+    const PROMO_COUNT = 5;
+    const timer = setInterval(() => {
+      setFade(false);
+      setTimeout(() => {
+        setPromoIdx((i) => (i + 1) % PROMO_COUNT);
+        setFade(true);
+      }, 350);
+    }, 15000);
+    return () => clearInterval(timer);
+  }, [user]);
   return (
     <div className="relative min-h-screen overflow-hidden">
       <div className="pointer-events-none absolute inset-0 bg-gradient-aurora" />
@@ -142,19 +162,57 @@ function Landing() {
         <Card className="relative overflow-hidden p-6 sm:p-10 border-border/50 bg-gradient-card">
           <div className="absolute inset-0 bg-gradient-aurora opacity-60" />
           <div className="relative grid sm:grid-cols-[1fr_auto] gap-6 items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 text-xs font-medium text-primary mb-2">
-                <Zap className="h-3.5 w-3.5" /> AI Coach
+            <div className="min-w-0">
+              <div className="inline-flex items-center gap-2 text-xs font-medium text-primary mb-3">
+                <Zap className="h-3.5 w-3.5" /> ASUKA COACH
               </div>
-              <p className="text-xl sm:text-2xl font-semibold leading-snug">
-                « {aiCoachContent.advice} {aiCoachContent.recommendation} {t("metric_match")} {aiCoachContent.scoreTarget}%. »
-              </p>
-              <div className="mt-4 flex gap-1">
-                {[1,2,3,4,5].map(i => <Star key={i} className="h-4 w-4 fill-accent text-accent" />)}
+              {user ? (
+                <p className="text-xl sm:text-2xl font-semibold leading-snug">
+                  « {aiCoachContent.advice} {aiCoachContent.recommendation} {t("metric_match")} {aiCoachContent.scoreTarget}%. »
+                </p>
+              ) : (
+                <p
+                  className="text-xl sm:text-2xl font-semibold leading-snug transition-opacity duration-300"
+                  style={{ opacity: fade ? 1 : 0 }}
+                >
+                  « {[
+                    t("coach_promo_1"),
+                    t("coach_promo_2"),
+                    t("coach_promo_3"),
+                    t("coach_promo_4"),
+                    t("coach_promo_5"),
+                  ][promoIdx]} »
+                </p>
+              )}
+              <div className="mt-4 flex items-center gap-3">
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((i) => {
+                    const filled = user ? i <= Math.round(profileScore / 20) : false;
+                    return (
+                      <Star
+                        key={i}
+                        className={`h-4 w-4 ${filled ? "fill-accent text-accent" : "text-border"}`}
+                      />
+                    );
+                  })}
+                </div>
+                {!user && (
+                  <div className="flex gap-1.5">
+                    {[0, 1, 2, 3, 4].map((i) => (
+                      <button
+                        key={i}
+                        onClick={() => { setPromoIdx(i); setFade(true); }}
+                        className={`h-1.5 rounded-full transition-all duration-300 ${i === promoIdx ? "w-4 bg-primary" : "w-1.5 bg-border"}`}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-            <Button asChild size="lg" className="bg-gradient-hero shadow-glow border-0">
-              <Link to="/auth" search={{ mode: "signup" }}>{t("nav_get_started")}</Link>
+            <Button asChild size="lg" className="bg-gradient-hero shadow-glow border-0 shrink-0">
+              <Link to={user ? "/coach" : "/auth"} search={user ? undefined : { mode: "signup" }}>
+                {user ? t("nav_coach") : t("nav_get_started")}
+              </Link>
             </Button>
           </div>
         </Card>
