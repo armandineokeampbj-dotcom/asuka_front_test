@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,15 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { rewardsAPI, payoutAPI } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthProvider";
-import { Coins, Smartphone, Plus, Trash2, Loader2, Sparkles } from "lucide-react";
+import { Coins, Smartphone, Plus, Trash2, Loader2, Sparkles, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useLang } from "@/i18n/LanguageProvider";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 
 export const Route = createFileRoute("/_app/rewards")({ component: RewardsPage });
 
 function RewardsPage() {
   const { user } = useAuth();
   const { t } = useLang();
+  const navigate = useNavigate();
+  const { settings, loading: settingsLoading } = usePlatformSettings();
   const [rewards, setRewards] = useState<any[]>([]);
   const [methods, setMethods] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,6 +38,13 @@ function RewardsPage() {
   };
 
   useEffect(() => { load(); }, [user?.id]);
+
+  // Redirect if module disabled (after settings are loaded)
+  useEffect(() => {
+    if (!settingsLoading && !settings.rewards_enabled) {
+      navigate({ to: "/dashboard" });
+    }
+  }, [settingsLoading, settings.rewards_enabled]);
 
   const totals = rewards.reduce(
     (acc, r) => {
@@ -76,7 +86,24 @@ function RewardsPage() {
     }
   };
 
-  if (loading) return <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> {t("loading")}</div>;
+  if (settingsLoading || loading) {
+    return (
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> {t("loading")}
+      </div>
+    );
+  }
+
+  // Shown briefly before redirect fires
+  if (!settings.rewards_enabled) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-3 text-center">
+        <Lock className="h-8 w-8 text-muted-foreground/40" />
+        <p className="font-semibold text-foreground">{t("rew_disabled_title")}</p>
+        <p className="text-sm text-muted-foreground max-w-xs">{t("rew_disabled_desc")}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

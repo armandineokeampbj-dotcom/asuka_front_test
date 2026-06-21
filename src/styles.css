@@ -189,6 +189,19 @@
     background-clip: text;
     color: transparent;
   }
+  .hero-title-word {
+    background: linear-gradient(90deg,
+      oklch(0.27 0.08 250),
+      oklch(0.66 0.12 180),
+      oklch(0.78 0.16 70),
+      oklch(0.66 0.12 180),
+      oklch(0.27 0.08 250)
+    );
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
   .glass {
     background: oklch(1 0 0 / 0.6);
     backdrop-filter: blur(20px);
@@ -198,6 +211,43 @@
     background: oklch(0.2 0.04 270 / 0.6);
     border-color: oklch(1 0 0 / 0.08);
   }
+  .hero-float {
+    animation: hero-float 7s ease-in-out infinite;
+    will-change: transform;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-float { animation: none; }
+  }
+
+  .header-bg {
+    background: linear-gradient(135deg, oklch(0.98 0.01 250 / 0.97), oklch(0.95 0.02 200 / 0.93));
+    backdrop-filter: blur(8px);
+  }
+  .dark .header-bg {
+    background: oklch(0.22 0.04 250 / 0.95);
+    backdrop-filter: blur(8px);
+  }
+}
+
+@keyframes hero-word-in {
+  from { opacity: 0; transform: translateY(28px); filter: blur(8px); }
+  to   { opacity: 1; transform: translateY(0);    filter: blur(0);   }
+}
+
+@keyframes metric-card-in {
+  from { opacity: 0; transform: translateY(28px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes hero-title-flow {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+
+@keyframes hero-float {
+  0%, 100% { transform: perspective(900px) rotateX(3deg) rotateY(-4deg) translateY(0px); }
+  33%       { transform: perspective(900px) rotateX(-2deg) rotateY(3deg) translateY(-10px); }
+  66%       { transform: perspective(900px) rotateX(2deg) rotateY(4deg) translateY(-5px); }
 }
 
 /* Markdown content styling for chat messages */

@@ -47,6 +47,7 @@ import { Route as AppAdminFirstLoginChangePasswordRouteImport } from './routes/_
 import { Route as AppAdminFirstLoginCompleteProfileRouteImport } from './routes/_app/admin/first-login/complete-profile'
 import { Route as AppVoiceSurveyIdRouteImport } from './routes/_app/voice.$surveyId'
 import { Route as AppOpportunitiesIdRouteImport } from './routes/_app/opportunities.$id'
+import { Route as PSlugRouteImport } from './routes/p.$slug'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
@@ -237,6 +238,11 @@ const AppOpportunitiesIdRoute = AppOpportunitiesIdRouteImport.update({
   path: '/opportunities/$id',
   getParentRoute: () => AppRoute,
 } as any)
+const PSlugRoute = PSlugRouteImport.update({
+  id: '/p/$slug',
+  path: '/p/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -276,6 +282,7 @@ export interface FileRoutesByFullPath {
   '/admin/first-login': typeof AppAdminFirstLoginRouteWithChildren
   '/admin/first-login/change-password': typeof AppAdminFirstLoginChangePasswordRoute
   '/admin/first-login/complete-profile': typeof AppAdminFirstLoginCompleteProfileRoute
+  '/p/$slug': typeof PSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -313,6 +320,7 @@ export interface FileRoutesByTo {
   '/admin/content/rewards': typeof AppAdminContentRewardsRoute
   '/admin/first-login/change-password': typeof AppAdminFirstLoginChangePasswordRoute
   '/admin/first-login/complete-profile': typeof AppAdminFirstLoginCompleteProfileRoute
+  '/p/$slug': typeof PSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -354,6 +362,7 @@ export interface FileRoutesById {
   '/_app/admin/first-login': typeof AppAdminFirstLoginRouteWithChildren
   '/_app/admin/first-login/change-password': typeof AppAdminFirstLoginChangePasswordRoute
   '/_app/admin/first-login/complete-profile': typeof AppAdminFirstLoginCompleteProfileRoute
+  '/p/$slug': typeof PSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -395,6 +404,7 @@ export interface FileRouteTypes {
     | '/admin/first-login'
     | '/admin/first-login/change-password'
     | '/admin/first-login/complete-profile'
+    | '/p/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -432,6 +442,7 @@ export interface FileRouteTypes {
     | '/admin/content/rewards'
     | '/admin/first-login/change-password'
     | '/admin/first-login/complete-profile'
+    | '/p/$slug'
   id:
     | '__root__'
     | '/'
@@ -472,6 +483,7 @@ export interface FileRouteTypes {
     | '/_app/admin/first-login'
     | '/_app/admin/first-login/change-password'
     | '/_app/admin/first-login/complete-profile'
+    | '/p/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -481,6 +493,7 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   LoginAdminRoute: typeof LoginAdminRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
+  PSlugRoute: typeof PSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -751,6 +764,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOpportunitiesIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/p/$slug': {
+      id: '/p/$slug'
+      path: '/p/$slug'
+      fullPath: '/p/$slug'
+      preLoaderRoute: typeof PSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -881,6 +901,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   LoginAdminRoute: LoginAdminRoute,
   VerifyEmailRoute: VerifyEmailRoute,
+  PSlugRoute: PSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

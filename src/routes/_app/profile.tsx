@@ -18,13 +18,13 @@ import { profileAPI } from "@/lib/api-client";
 import { toast } from "sonner";
 import { computeCompletion } from "@/lib/profile-completion";
 import { getDisplayScores, calculateReadiness } from "@/lib/score-calculator";
-import { getDegreeListByLang } from "@/lib/education-data";
+import { getDegreeListByLang, getDegreeLabelByLang } from "@/lib/education-data";
 import { awardXp, awardBadgeIfMissing, notify } from "@/lib/asuka-actions";
 import {
   Sparkles, Trophy, Flame, Edit3, Plus, Trash2, GraduationCap, Briefcase,
   Award, Target, Globe, Camera, Download, Brain, ShieldCheck, Eye, Loader2,
   Linkedin, Github, Link2, FileText, MapPin, User, Phone, Calendar, Building2,
-  Languages, CheckCircle2, Layers, Lock, Users, Wand2, Upload, Type, RefreshCw,
+  Languages, CheckCircle2, Layers, Lock, Users, Wand2, Upload, Type, RefreshCw, Copy,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_app/profile")({ component: ProfilePage });
@@ -864,6 +864,26 @@ function ProfilePage() {
                   {t("prof_cv_generated_on")} {new Date(p.cvGeneratedAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })}
                 </p>
               )}
+              {p.profileSlug && (
+                <div className="mt-3 pt-3 border-t border-border/50">
+                  <p className="text-xs text-muted-foreground mb-1.5">{t("pub_online")}</p>
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border border-border/50">
+                    <Globe className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span className="text-xs text-muted-foreground truncate flex-1">
+                      {window.location.origin}/p/{p.profileSlug}
+                    </span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/p/${p.profileSlug}`);
+                        toast.success(t("pub_link_copied"));
+                      }}
+                      className="shrink-0 text-muted-foreground hover:text-primary"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </Card>
           </div>
         </TabsContent>
@@ -946,12 +966,72 @@ function ProfilePage() {
           {showAspirationsForm ? (
             <AspirationsForm p={p} t={t} onSave={saveProfile} onClose={() => setShowAspirationsForm(false)} />
           ) : (
-            <div className="flex justify-center mt-4">
-              <Button onClick={() => setShowAspirationsForm(true)} className="bg-gradient-hero border-0 shadow-glow">
-                <Edit3 className="h-4 w-4 mr-2" />
-                {t("prof_tab_aspirations")}
-              </Button>
-            </div>
+            <Card className="p-6 border-border/50 bg-gradient-card space-y-5">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  {t("prof_tab_aspirations")}
+                </h3>
+                <Button size="sm" variant="outline" onClick={() => setShowAspirationsForm(true)}>
+                  <Edit3 className="h-4 w-4 mr-1.5" />{t("prof_edit")}
+                </Button>
+              </div>
+
+              {/* Rôle de rêve */}
+              <div>
+                <div className="text-xs text-muted-foreground mb-0.5 flex items-center gap-1">
+                  <Target className="h-3 w-3" />{t("prof_aspir_dream")}
+                </div>
+                <div className={`font-medium ${!p.dream_career ? "text-muted-foreground/50 italic text-xs" : ""}`}>
+                  {p.dream_career || "—"}
+                </div>
+              </div>
+
+              {/* Secteurs */}
+              {Array.isArray(p.industries) && p.industries.length > 0 && (
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
+                    <Building2 className="h-3 w-3" />{t("prof_aspir_industries")}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {p.industries.map((ind: string) => (
+                      <Badge key={ind} variant="secondary" className="text-xs">{ind}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Causes */}
+              {Array.isArray(p.causes) && p.causes.length > 0 && (
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
+                    <Globe className="h-3 w-3" />{t("prof_aspir_causes")}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {p.causes.map((cause: string) => (
+                      <Badge key={cause} variant="outline" className="text-xs">{cause}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Vision */}
+              {p.future_vision && (
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
+                    <Eye className="h-3 w-3" />{t("prof_aspir_vision")}
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{p.future_vision}</p>
+                </div>
+              )}
+
+              {/* État vide */}
+              {!p.dream_career && !p.future_vision &&
+                (!Array.isArray(p.industries) || p.industries.length === 0) &&
+                (!Array.isArray(p.causes) || p.causes.length === 0) && (
+                <p className="text-sm text-muted-foreground/50 italic">—</p>
+              )}
+            </Card>
           )}
         </TabsContent>
 
@@ -960,11 +1040,79 @@ function ProfilePage() {
           {showSocialForm ? (
             <SocialLinksForm p={p} t={t} lang={lang} onSave={saveProfile} onClose={() => setShowSocialForm(false)} />
           ) : (
-            <div className="flex justify-center">
-              <Button onClick={() => setShowSocialForm(true)} className="bg-gradient-hero border-0 shadow-glow">
-                <Edit3 className="h-4 w-4 mr-2" />{t("prof_port_links")}
-              </Button>
-            </div>
+            <Card className="p-6 border-border/50 bg-gradient-card space-y-5">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-primary" />
+                  {t("prof_port_links")}
+                </h3>
+                <Button size="sm" variant="outline" onClick={() => setShowSocialForm(true)}>
+                  <Edit3 className="h-4 w-4 mr-1.5" />{t("prof_edit")}
+                </Button>
+              </div>
+
+              {/* Réseaux sociaux */}
+              <div className="space-y-3">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("prof_section_social")}</div>
+                <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                  {[
+                    { label: t("prof_port_linkedin"), value: (p.social_links as any)?.linkedin as string | undefined, Icon: Linkedin },
+                    { label: t("prof_port_github"),   value: (p.social_links as any)?.github   as string | undefined, Icon: Github },
+                    { label: t("prof_port_behance"),  value: (p.social_links as any)?.behance  as string | undefined, Icon: Link2 },
+                    { label: t("prof_port_website"),  value: (p.social_links as any)?.website  as string | undefined, Icon: Globe },
+                  ].map(({ label, value, Icon }) => (
+                    <div key={String(label)}>
+                      <div className="text-xs text-muted-foreground mb-0.5 flex items-center gap-1">
+                        <Icon className="h-3 w-3" />{label}
+                      </div>
+                      {value ? (
+                        <a
+                          href={value.startsWith("http") ? value : `https://${value}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline truncate block"
+                        >
+                          {value}
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground/50 italic text-xs">—</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Médias */}
+              <div className="space-y-3 pt-3 border-t border-border/30">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("prof_section_media")}</div>
+                <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-0.5 flex items-center gap-1">
+                      <Link2 className="h-3 w-3" />{t("prof_port_video")}
+                    </div>
+                    {p.video_intro_url ? (
+                      <a href={p.video_intro_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate block">
+                        {p.video_intro_url}
+                      </a>
+                    ) : (
+                      <span className="text-muted-foreground/50 italic text-xs">—</span>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-0.5 flex items-center gap-1">
+                      <FileText className="h-3 w-3" />{t("prof_doc_link")}
+                    </div>
+                    {p.cvUrl ? (
+                      <a href={p.cvUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
+                        <FileText className="h-3 w-3" />{t("prof_doc_view")}
+                      </a>
+                    ) : (
+                      <span className="text-muted-foreground/50 italic text-xs">—</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Card>
           )}
           <PortfolioSection items={portfolio} t={t} userId={user!.id} reload={reload} />
         </TabsContent>
@@ -1426,6 +1574,7 @@ function Field({ label, children }: any) {
 
 /* EDUCATION */
 function EducationSection({ items, t, userId, reload }: any) {
+  const { lang } = useLang();
   return (
     <Card className="p-6 border-border/50">
       <div className="flex items-center justify-between mb-4">
@@ -1442,7 +1591,7 @@ function EducationSection({ items, t, userId, reload }: any) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold truncate">{e.field || "—"}</div>
-                  <div className="text-sm text-muted-foreground">{e.degree && <span className="mr-1">{e.degree} ·</span>}{e.institution}{e.country ? `, ${e.country}` : ""}</div>
+                  <div className="text-sm text-muted-foreground">{e.degree && <span className="mr-1">{getDegreeLabelByLang(e.degree, lang as "en" | "fr")} ·</span>}{e.institution}{e.country ? `, ${e.country}` : ""}</div>
                   <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><Calendar className="h-3 w-3" />{fmtDate(e.startDate)} → {e.currentlyStudying ? t("prof_now") : fmtDate(e.endDate)}</div>
                   {e.description && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{e.description}</p>}
                 </div>
@@ -1486,7 +1635,7 @@ function EduDialog({ userId, t, reload }: any) {
         field: f.field,
         country: f.country,
         startDate: f.startDate,
-        endDate: f.endDate,
+        endDate: f.currentlyStudying ? null : (f.endDate || null),
         currentlyStudying: f.currentlyStudying,
         description: f.description,
       });
@@ -1568,7 +1717,7 @@ function EditEduDialog({ education, userId, t, reload }: any) {
         field: f.field,
         country: f.country,
         startDate: f.startDate,
-        endDate: f.endDate,
+        endDate: f.currentlyStudying ? null : (f.endDate || null),
         currentlyStudying: f.currentlyStudying,
         description: f.description,
       });

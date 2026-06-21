@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Sparkles, Briefcase, Radio, UserCircle2, ArrowRight, Star, Zap } from "lucide-react";
 import { useAuth } from "@/context/AuthProvider";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { profileAPI } from "@/lib/api-client";
 import { generateAICoachContent, type UserProfile } from "@/lib/asuka-actions";
 import { computeCompletion } from "@/lib/profile-completion";
@@ -32,6 +32,66 @@ function Landing() {
   const [profileScore, setProfileScore] = useState(0);
   const [promoIdx, setPromoIdx] = useState(0);
   const [fade, setFade] = useState(true);
+
+  const heroCardRef = useRef<HTMLDivElement>(null);
+  const heroGlareRef = useRef<HTMLDivElement>(null);
+  const metricsRef = useRef<HTMLDivElement>(null);
+  const [metricsVisible, setMetricsVisible] = useState(false);
+  const [metricCounts, setMetricCounts] = useState([0, 0, 0, 0]);
+
+  const METRIC_TARGETS = [1, 50, 3, 86];
+
+  useEffect(() => {
+    const el = metricsRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        observer.disconnect();
+        setMetricsVisible(true);
+        const duration = 2000;
+        const start = performance.now();
+        const tick = (now: number) => {
+          const elapsed = now - start;
+          const p = Math.min(elapsed / duration, 1);
+          const eased = p === 1 ? 1 : 1 - Math.pow(2, -10 * p);
+          setMetricCounts(METRIC_TARGETS.map((max) => Math.round(eased * max)));
+          if (p < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      },
+      { threshold: 0.3 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const handleHeroMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const card = heroCardRef.current;
+    const glare = heroGlareRef.current;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    const dx = (e.clientX - rect.left - rect.width / 2) / (rect.width / 2);
+    const dy = (e.clientY - rect.top - rect.height / 2) / (rect.height / 2);
+    card.style.transform = `perspective(900px) rotateX(${dy * -12}deg) rotateY(${dx * 12}deg) scale(1.04)`;
+    card.style.transition = "transform 0.08s ease-out";
+    if (glare) {
+      const gx = ((e.clientX - rect.left) / rect.width) * 100;
+      const gy = ((e.clientY - rect.top) / rect.height) * 100;
+      glare.style.background = `radial-gradient(circle at ${gx}% ${gy}%, rgba(255,255,255,0.18) 0%, transparent 60%)`;
+      glare.style.opacity = "1";
+    }
+  };
+
+  const handleHeroMouseLeave = () => {
+    const card = heroCardRef.current;
+    const glare = heroGlareRef.current;
+    if (card) {
+      card.style.transform = "";
+      card.style.transition = "transform 0.7s ease-out";
+    }
+    if (glare) glare.style.opacity = "0";
+  };
 
   // Fetch user profile and generate personalized AI Coach content
   useEffect(() => {
@@ -72,20 +132,36 @@ function Landing() {
     return () => clearInterval(timer);
   }, [user]);
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 bg-gradient-aurora" />
+    <>
       <PublicHeader />
+    <div className="relative min-h-screen overflow-x-hidden">
+      <div className="pointer-events-none absolute inset-0 bg-gradient-aurora" />
 
       {/* HERO */}
       <section className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-12 pb-20">
-        <div className="grid lg:grid-cols-[1.1fr_1fr] gap-10 items-center">
+        <div className="grid lg:grid-cols-[1fr_1.2fr] gap-10 items-center">
           <div className="text-center lg:text-left">
             <div className="inline-flex items-center gap-2 rounded-full glass px-4 py-1.5 text-xs font-medium text-foreground/80 mb-6">
               <Sparkles className="h-3.5 w-3.5 text-accent" />
               {t("hero_badge")}
             </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05]">
-              <span className="text-gradient">{t("tagline")}</span>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.15]">
+              {t("tagline").split(" ").map((word, i, arr) => (
+                <Fragment key={i}>
+                  <span
+                    className="hero-title-word inline-block"
+                    style={{
+                      animation: [
+                        `hero-word-in 0.75s cubic-bezier(0.16, 1, 0.3, 1) ${i * 0.1 + 0.1}s both`,
+                        `hero-title-flow 4s ease-in-out ${i * 0.15 + 1.8}s infinite`,
+                      ].join(", "),
+                    }}
+                  >
+                    {word}
+                  </span>
+                  {i < arr.length - 1 && " "}
+                </Fragment>
+              ))}
             </h1>
             <p className="mt-6 max-w-xl mx-auto lg:mx-0 text-base sm:text-lg text-muted-foreground">
               {t("subtagline")}
@@ -99,29 +175,58 @@ function Landing() {
               </Button>
             </div>
           </div>
-          <div className="relative mx-auto max-w-lg">
-            <div className="absolute inset-0 bg-gradient-aurora blur-3xl opacity-70" />
-            <div className="w-full h-auto bg-gradient-to-br from-primary/20 to-accent/20 rounded-xl overflow-hidden p-8 min-h-96">
-              <img 
-                src={heroIllustration} 
-                alt="Hero illustration" 
-                className="w-full h-full object-cover rounded-lg"
+          <div className="relative mx-auto w-full max-w-2xl flex items-center justify-center">
+            {/* Glow halo derrière la card */}
+            <div className="absolute inset-[-10%] bg-gradient-aurora blur-3xl opacity-60 pointer-events-none" />
+
+            {/* Card 3D — tilt souris + flottement auto */}
+            <div
+              ref={heroCardRef}
+              onMouseMove={handleHeroMouseMove}
+              onMouseLeave={handleHeroMouseLeave}
+              className="hero-float relative w-full rounded-2xl overflow-hidden shadow-2xl"
+              style={{ transformStyle: "preserve-3d", willChange: "transform" }}
+            >
+              {/* Reflet lumineux dynamique */}
+              <div
+                ref={heroGlareRef}
+                className="absolute inset-0 z-10 pointer-events-none rounded-2xl"
+                style={{ opacity: 0, transition: "opacity 0.3s ease" }}
+              />
+              {/* Bordure subtile */}
+              <div className="absolute inset-0 rounded-2xl ring-1 ring-white/10 z-20 pointer-events-none" />
+
+              <img
+                src={heroIllustration}
+                alt="Hero illustration"
+                className="w-full h-auto object-cover block -mt-[8%]"
+                draggable={false}
               />
             </div>
           </div>
         </div>
 
         {/* Metrics */}
-        <div className="mt-16 grid grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
+        <div ref={metricsRef} className="mt-16 grid grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
           {[
-            { v: "1K+", l: t("metric_youth") },
-            { v: "50+", l: t("metric_opps") },
-            { v: "3", l: t("metric_countries") },
-            { v: "86%", l: t("metric_match") },
-          ].map((m) => (
-            <Card key={m.l} className="p-4 glass border-border/50 text-center">
-              <div className="text-2xl sm:text-3xl font-bold text-gradient">{m.v}</div>
-              <div className="text-xs text-muted-foreground mt-1">{m.l}</div>
+            { fmt: (n: number) => `${n}K+`, label: t("metric_youth") },
+            { fmt: (n: number) => `${n}+`,  label: t("metric_opps") },
+            { fmt: (n: number) => `${n}`,   label: t("metric_countries") },
+            { fmt: (n: number) => `${n}%`,  label: t("metric_match") },
+          ].map((m, i) => (
+            <Card
+              key={m.label}
+              className="p-4 glass border-border/50 text-center"
+              style={
+                metricsVisible
+                  ? { animation: `metric-card-in 0.65s cubic-bezier(0.16, 1, 0.3, 1) ${i * 0.13}s both` }
+                  : { opacity: 0 }
+              }
+            >
+              <div className="text-2xl sm:text-3xl font-bold text-gradient tabular-nums">
+                {m.fmt(metricCounts[i])}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">{m.label}</div>
             </Card>
           ))}
         </div>
@@ -231,5 +336,6 @@ function Landing() {
         © {new Date().getFullYear()} Asuka One — Make potential visible.
       </footer>
     </div>
+    </>
   );
 }

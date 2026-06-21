@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./ThemeToggle";
 import { toast } from "sonner";
@@ -31,6 +32,7 @@ export function AppShell() {
   const nav = useNavigate();
   const loc = useLocation();
   const { isAdmin } = useIsAdmin();
+  const { settings } = usePlatformSettings();
 
   const isAdminRoute = loc.pathname.startsWith("/admin");
 
@@ -66,7 +68,7 @@ export function AppShell() {
     { to: "/opportunities", label: t("nav_opportunities"), icon: Briefcase },
     { to: "/coach",         label: t("nav_coach"),         icon: Sparkles },
     { to: "/pulse",         label: t("nav_pulse"),         icon: Radio },
-    { to: "/rewards",       label: t("nav_rewards"),       icon: Coins },
+    ...(settings.rewards_enabled ? [{ to: "/rewards", label: t("nav_rewards"), icon: Coins }] : []),
   ];
 
   const sidebarHidden = isAdminRoute && navCollapsed;
@@ -75,8 +77,8 @@ export function AppShell() {
     <div className="h-screen flex flex-col bg-background overflow-hidden">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <header className="shrink-0 z-30 border-b border-border/60 glass">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+      <header className="shrink-0 z-30 border-b border-border/60 header-bg">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-1 flex items-center justify-between">
 
           <div className="flex items-center gap-2">
             {isAdminRoute && (

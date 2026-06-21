@@ -476,6 +476,15 @@ export const adminAPI = {
       method: "DELETE",
     }),
 
+  // Maintenance
+  fixProfileSlugs: () =>
+    apiCall("/api/admin/fix-profile-slugs", { method: "POST" }),
+  setUserSlug: (data: { userId?: string; email?: string; slug: string }) =>
+    apiCall("/api/admin/set-user-slug", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
   // Moderation / Reports
   getReports: () => apiCall("/api/moderation"),
   createReport: (data: any) =>

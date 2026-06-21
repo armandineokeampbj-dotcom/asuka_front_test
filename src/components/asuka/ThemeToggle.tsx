@@ -9,7 +9,11 @@ export function ThemeToggle() {
       variant="ghost"
       size="icon"
       onClick={toggleTheme}
-      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+      className={
+        theme === "dark"
+          ? "h-8 w-8 rounded-full border border-primary/50 bg-primary/15 text-primary hover:bg-primary/25 hover:text-primary"
+          : "h-8 w-8 rounded-full border border-foreground/25 text-muted-foreground hover:text-foreground hover:border-primary/50"
+      }
       aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
     >
       {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}

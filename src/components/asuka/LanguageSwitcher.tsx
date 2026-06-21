@@ -1,5 +1,5 @@
 import { useLang } from "@/i18n/LanguageProvider";
-import { Globe, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,13 +8,26 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const LANGUAGES = [
-  { code: "en", name: "English", flag: "🇬🇧" },
-  { code: "fr", name: "Français", flag: "🇫🇷" },
-  { code: "pt", name: "Português", flag: "🇵🇹" },
-  { code: "ar", name: "العربية", flag: "🇸🇦" },
-  { code: "es", name: "Español", flag: "🇪🇸" },
-  { code: "sw", name: "Kiswahili", flag: "🇰🇪" },
+  { code: "en", name: "English",   country: "gb" },
+  { code: "fr", name: "Français",  country: "fr" },
+  { code: "pt", name: "Português", country: "pt" },
+  { code: "ar", name: "العربية",   country: "sa" },
+  { code: "es", name: "Español",   country: "es" },
+  { code: "sw", name: "Kiswahili", country: "ke" },
 ];
+
+function FlagImg({ country, name }: { country: string; name: string }) {
+  return (
+    <img
+      src={`https://flagcdn.com/20x15/${country}.png`}
+      srcSet={`https://flagcdn.com/40x30/${country}.png 2x`}
+      width={20}
+      height={15}
+      alt={name}
+      className="rounded-sm object-cover shrink-0"
+    />
+  );
+}
 
 export function LanguageSwitcher() {
   const { lang, setLang } = useLang();
@@ -25,8 +38,9 @@ export function LanguageSwitcher() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 backdrop-blur px-3 py-2 text-sm font-medium transition hover:bg-card/80">
-          <Globe className="h-4 w-4" />
-          <span>{currentLang?.flag}</span>
+          {currentLang && (
+            <FlagImg country={currentLang.country} name={currentLang.name} />
+          )}
           <span className="hidden sm:inline">{currentLang?.name}</span>
         </button>
       </DropdownMenuTrigger>
@@ -39,7 +53,7 @@ export function LanguageSwitcher() {
           >
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center gap-2">
-                <span>{language.flag}</span>
+                <FlagImg country={language.country} name={language.name} />
                 <span>{language.name}</span>
               </div>
               {lang === language.code && (

@@ -7,9 +7,10 @@ import { useAuth, getAuthToken } from "@/context/AuthProvider";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { adminAPI, adminTeamAPI } from "@/lib/api-client";
 import { useLang } from "@/i18n/LanguageProvider";
+import { usePlatformSettings, invalidatePlatformSettingsCache } from "@/hooks/usePlatformSettings";
 import {
   Users, Briefcase, BarChart3, Award, Shield, ScrollText,
-  Plus, Loader2, AlertTriangle, User, UserPlus,
+  Plus, Loader2, AlertTriangle, User, UserPlus, Coins,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,9 +23,11 @@ function AdminDashboard() {
   const navigate = useNavigate();
   const { t } = useLang();
   const { isSuperAdmin, isAdminB, isCollaborator, isReader, permissions } = useAdminPermissions();
+  const { settings, refetch: refetchSettings } = usePlatformSettings();
   const [stats, setStats] = useState<any>(null);
   const [teamStats, setTeamStats] = useState<{ adminsB: number; collaborators: number } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [togglingRewards, setTogglingRewards] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -62,6 +65,29 @@ function AdminDashboard() {
       navigate({ to: "/dashboard" });
     } catch {
       toast.error(t("admin_activate_error"));
+    }
+  };
+
+  const handleToggleRewards = async () => {
+    setTogglingRewards(true);
+    try {
+      const newValue = !settings.rewards_enabled;
+      const res = await fetch(`${API_BASE}/api/platform-settings/admin/rewards_enabled`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getAuthToken()}`,
+        },
+        body: JSON.stringify({ value: newValue }),
+      });
+      if (!res.ok) throw new Error("toggle_failed");
+      invalidatePlatformSettingsCache();
+      await refetchSettings();
+      toast.success(newValue ? t("admin_rewards_toggle_on_ok") : t("admin_rewards_toggle_off_ok"));
+    } catch {
+      toast.error(t("admin_rewards_toggle_error"));
+    } finally {
+      setTogglingRewards(false);
     }
   };
 
@@ -206,6 +232,44 @@ function AdminDashboard() {
           <h2 className="text-sm font-semibold mb-2">{t("admin_my_manager")}</h2>
           <p className="text-xs text-muted-foreground">Admin B · {user.parentAdminId}</p>
         </Card>
+      )}
+
+      {/* Gestion des fonctionnalités — super_admin uniquement */}
+      {isSuperAdmin && (
+        <div>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            {t("admin_section_features")}
+          </h2>
+          <Card className="p-4 border-border/40">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${settings.rewards_enabled ? "bg-accent/15" : "bg-muted"}`}>
+                  <Coins className={`h-4 w-4 ${settings.rewards_enabled ? "text-accent" : "text-muted-foreground"}`} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{t("admin_rewards_module_label")}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {settings.rewards_enabled ? t("admin_rewards_module_active") : t("admin_rewards_module_inactive")}
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant={settings.rewards_enabled ? "outline" : "default"}
+                onClick={handleToggleRewards}
+                disabled={togglingRewards}
+                className={`shrink-0 min-w-[110px] ${settings.rewards_enabled ? "border-destructive/40 text-destructive hover:bg-destructive/5" : ""}`}
+              >
+                {togglingRewards
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : settings.rewards_enabled
+                    ? t("admin_rewards_toggle_disable")
+                    : t("admin_rewards_toggle_enable")
+                }
+              </Button>
+            </div>
+          </Card>
+        </div>
       )}
 
       {/* Accès rapides */}
