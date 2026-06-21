@@ -108,18 +108,18 @@ function RewardsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2"><Coins className="h-6 w-6 text-accent" /> {t("rew_title")}</h1>
-        <p className="text-muted-foreground mt-1">{t("rew_desc")}</p>
+        <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2"><Coins className="h-6 w-6 text-accent" /> {t("rew_title")}</h1>
+        <p className="text-muted-foreground mt-1 text-sm sm:text-base">{t("rew_desc")}</p>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
         <Card className="p-5 bg-gradient-to-br from-accent/15 to-accent/5 border-accent/30">
           <div className="text-xs uppercase tracking-wider text-muted-foreground">{t("rew_paid")}</div>
-          <div className="text-3xl font-bold mt-1">{totals.paid.toLocaleString()} <span className="text-base font-normal text-muted-foreground">{rewards[0]?.currency ?? "XOF"}</span></div>
+          <div className="text-2xl sm:text-3xl font-bold mt-1 break-all">{totals.paid.toLocaleString()} <span className="text-sm sm:text-base font-normal text-muted-foreground">{rewards[0]?.currency ?? "XOF"}</span></div>
         </Card>
         <Card className="p-5 bg-gradient-to-br from-secondary/15 to-secondary/5 border-secondary/30">
           <div className="text-xs uppercase tracking-wider text-muted-foreground">{t("rew_pending")}</div>
-          <div className="text-3xl font-bold mt-1">{totals.pending.toLocaleString()} <span className="text-base font-normal text-muted-foreground">{rewards[0]?.currency ?? "XOF"}</span></div>
+          <div className="text-2xl sm:text-3xl font-bold mt-1 break-all">{totals.pending.toLocaleString()} <span className="text-sm sm:text-base font-normal text-muted-foreground">{rewards[0]?.currency ?? "XOF"}</span></div>
         </Card>
       </div>
 
@@ -128,13 +128,13 @@ function RewardsPage() {
           <h2 className="font-semibold mb-3">{t("rew_ledger")}</h2>
           <div className="space-y-2">
             {rewards.map((r) => (
-              <div key={r.id} className="flex items-center justify-between border-b border-border/50 pb-2 last:border-0">
-                <div>
-                  <div className="text-sm font-medium">{r.reason ?? r.kind}</div>
-                  <div className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()} · <Badge variant="outline" className="text-[10px]">{r.kind}</Badge></div>
+              <div key={r.id} className="flex items-start justify-between gap-3 border-b border-border/50 pb-2 last:border-0">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{r.reason ?? r.kind}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">{new Date(r.created_at).toLocaleDateString()} · <Badge variant="outline" className="text-[10px]">{r.kind}</Badge></div>
                 </div>
-                <div className="text-right">
-                  <div className="font-semibold">{Number(r.amount).toLocaleString()} {r.currency}</div>
+                <div className="text-right shrink-0">
+                  <div className="font-semibold text-sm">{Number(r.amount).toLocaleString()} {r.currency}</div>
                   <Badge className={r.status === "paid" ? "bg-success/15 border-success/30 text-foreground" : "bg-muted border-border text-foreground"}>{r.status}</Badge>
                 </div>
               </div>

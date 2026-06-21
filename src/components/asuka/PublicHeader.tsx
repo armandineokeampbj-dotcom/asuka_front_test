@@ -5,6 +5,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { useLang } from "@/i18n/LanguageProvider";
 import { useAuth } from "@/context/AuthProvider";
+import { LogIn, LayoutDashboard } from "lucide-react";
 
 export function PublicHeader() {
   const { t } = useLang();
@@ -18,11 +19,17 @@ export function PublicHeader() {
           <LanguageSwitcher />
           {user ? (
             <Button asChild size="sm">
-              <Link to="/dashboard">{t("nav_dashboard")}</Link>
+              <Link to="/dashboard" className="inline-flex items-center gap-1.5">
+                <LayoutDashboard className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">{t("nav_dashboard")}</span>
+              </Link>
             </Button>
           ) : (
             <Button asChild size="sm" className="bg-gradient-hero shadow-glow border-0">
-              <Link to="/auth" search={{ mode: "signin" }}>{t("nav_signin")}</Link>
+              <Link to="/auth" search={{ mode: "signin" }} className="inline-flex items-center gap-1.5">
+                <LogIn className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">{t("nav_signin")}</span>
+              </Link>
             </Button>
           )}
         </div>

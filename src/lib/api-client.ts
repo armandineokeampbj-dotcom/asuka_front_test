@@ -400,6 +400,11 @@ export const adminAPI = {
       method: "PUT",
       body: JSON.stringify(data),
     }),
+  updateUserEmail: (id: string, email: string) =>
+    apiCall(`/api/admin/users/${id}/email`, {
+      method: "PATCH",
+      body: JSON.stringify({ email }),
+    }),
 
   // Opportunities
   getOpportunities: () => apiCall("/api/admin/opportunities"),

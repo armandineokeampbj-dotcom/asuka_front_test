@@ -292,7 +292,7 @@ function Coach() {
   const inputDisabled = !!quotaExhausted || quota?.remaining === 0;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-180px)] lg:h-[calc(100vh-120px)]">
+    <div className="flex flex-col h-[calc(100vh-160px)] md:h-[calc(100vh-140px)] lg:h-[calc(100vh-120px)]">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -400,7 +400,7 @@ function Coach() {
                         </div>
                         {/* Copy button */}
                         {m.content && (
-                          <div className="mt-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                          <div className="mt-3 flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
                             <button
                               onClick={() => copyMessage(i, m.content)}
                               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1 px-2 rounded-md hover:bg-muted/60"
@@ -448,7 +448,7 @@ function Coach() {
 
         {/* Quota banner */}
         {quota !== null && (
-          <div className={`px-4 sm:px-8 py-1.5 text-[11px] flex items-center justify-between border-t border-border/40 ${quota.remaining <= 3 ? "text-destructive" : "text-muted-foreground"}`}>
+          <div className={`px-4 sm:px-8 py-1.5 text-[11px] flex flex-wrap items-center justify-between gap-1 border-t border-border/40 ${quota.remaining <= 3 ? "text-destructive" : "text-muted-foreground"}`}>
             <span>{t("coach_limit_today").replace("{remaining}", String(quota.remaining))}</span>
             {quota.remaining <= 3 && (
               <span className="font-medium">{t("coach_quota_warning")}</span>

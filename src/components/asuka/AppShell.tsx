@@ -115,7 +115,7 @@ export function AppShell() {
               className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5"
             >
               <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">{t("nav_signout")}</span>
+              <span className="hidden lg:inline">{t("nav_signout")}</span>
             </button>
           </div>
         </div>
@@ -207,7 +207,7 @@ export function AppShell() {
             "flex-1 min-w-0 min-h-0",
             isAdminRoute
               ? "overflow-hidden flex flex-col"
-              : "overflow-y-auto py-6 pb-28 lg:pb-6"
+              : "overflow-x-hidden overflow-y-auto py-6 pb-28 lg:pb-6"
           )}>
             <Outlet />
           </main>

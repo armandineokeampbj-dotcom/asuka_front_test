@@ -416,7 +416,7 @@ function SurveyRunner() {
             <p className="text-sm text-muted-foreground">{t("survey_respondent_subtitle")}</p>
           </div>
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div className="space-y-1">
                 <Label className="text-xs">{t("survey_respondent_name")}</Label>
                 <Input value={respondent.name} onChange={(e) => setRespondent({ ...respondent, name: e.target.value })} />

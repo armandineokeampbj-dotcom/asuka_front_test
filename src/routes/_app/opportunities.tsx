@@ -210,8 +210,8 @@ function Opps() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-3xl font-bold">{t("opp_title")}</h1>
-        <p className="text-muted-foreground mt-1">{t("opp_subtitle")}</p>
+        <h1 className="text-2xl sm:text-3xl font-bold">{t("opp_title")}</h1>
+        <p className="text-muted-foreground mt-1 text-sm sm:text-base">{t("opp_subtitle")}</p>
       </div>
 
       {/* Filtres type */}
@@ -232,40 +232,41 @@ function Opps() {
       </div>
 
       {/* Filtres avancés + tri */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-        {uniqueCountries.length > 0 && (
-          <select
-            className="h-8 rounded-lg border border-border bg-card px-3 text-sm text-foreground"
-            value={filterCountry}
-            onChange={(e) => setFilterCountry(e.target.value)}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        <div className="flex flex-wrap gap-2 items-center flex-1">
+          <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          {uniqueCountries.length > 0 && (
+            <select
+              className="h-8 flex-1 sm:flex-none min-w-[130px] rounded-lg border border-border bg-card px-3 text-sm text-foreground"
+              value={filterCountry}
+              onChange={(e) => setFilterCountry(e.target.value)}
+            >
+              <option value="">{t("opp_filter_all_countries")}</option>
+              {uniqueCountries.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          )}
+          {uniqueOrgs.length > 0 && (
+            <select
+              className="h-8 flex-1 sm:flex-none min-w-[130px] rounded-lg border border-border bg-card px-3 text-sm text-foreground"
+              value={filterOrg}
+              onChange={(e) => setFilterOrg(e.target.value)}
+            >
+              <option value="">{t("opp_filter_all_orgs")}</option>
+              {uniqueOrgs.map((org) => <option key={org} value={org}>{org}</option>)}
+            </select>
+          )}
+          <button
+            onClick={() => setFilterRemote(!filterRemote)}
+            className={`h-8 px-3 rounded-lg border text-sm transition whitespace-nowrap ${
+              filterRemote
+                ? "bg-primary/10 border-primary/40 text-primary font-medium"
+                : "border-border bg-card hover:border-primary/30"
+            }`}
           >
-            <option value="">{t("opp_filter_all_countries")}</option>
-            {uniqueCountries.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        )}
-        {uniqueOrgs.length > 0 && (
-          <select
-            className="h-8 rounded-lg border border-border bg-card px-3 text-sm text-foreground"
-            value={filterOrg}
-            onChange={(e) => setFilterOrg(e.target.value)}
-          >
-            <option value="">{t("opp_filter_all_orgs")}</option>
-            {uniqueOrgs.map((org) => <option key={org} value={org}>{org}</option>)}
-          </select>
-        )}
-        <button
-          onClick={() => setFilterRemote(!filterRemote)}
-          className={`h-8 px-3 rounded-lg border text-sm transition ${
-            filterRemote
-              ? "bg-primary/10 border-primary/40 text-primary font-medium"
-              : "border-border bg-card hover:border-primary/30"
-          }`}
-        >
-          {t("opp_filter_remote")}
-        </button>
-
-        <div className="ml-auto flex items-center gap-2">
+            {t("opp_filter_remote")}
+          </button>
+        </div>
+        <div className="flex justify-end sm:justify-start">
           <select
             className="h-8 rounded-lg border border-border bg-card px-3 text-sm text-foreground"
             value={sort}

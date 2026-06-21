@@ -145,12 +145,12 @@ function Dashboard() {
       <Card className="relative overflow-hidden p-6 sm:p-8 border-border/50 bg-gradient-card">
         <div className="absolute inset-0 bg-gradient-aurora opacity-60" />
         <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-sm text-muted-foreground">{t("dash_welcome")}</p>
-            <h1 className="text-3xl sm:text-4xl font-bold mt-1">
+            <h1 className="text-2xl sm:text-4xl font-bold mt-1 truncate">
               {name} <span className="text-gradient">✨</span>
             </h1>
-            <p className="mt-2 text-muted-foreground max-w-xl">{t("dash_subwelcome")}</p>
+            <p className="mt-1 sm:mt-2 text-sm sm:text-base text-muted-foreground max-w-xl">{t("dash_subwelcome")}</p>
             {labels.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-4">
                 {labels.map((l) => (
@@ -161,8 +161,8 @@ function Dashboard() {
               </div>
             )}
           </div>
-          <div className="flex gap-3">
-            <Card className="px-4 py-3 border-border/40">
+          <div className="flex gap-2 sm:gap-3 shrink-0">
+            <Card className="px-3 sm:px-4 py-3 border-border/40">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Flame className="h-3.5 w-3.5 text-accent" />{t("dash_streak")}
               </div>
@@ -170,7 +170,7 @@ function Dashboard() {
                 {streak} <span className="text-xs text-muted-foreground font-normal">{t("dash_days")}</span>
               </div>
             </Card>
-            <Card className="px-4 py-3 border-border/40">
+            <Card className="px-3 sm:px-4 py-3 border-border/40">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Trophy className="h-3.5 w-3.5 text-primary" />{t("dash_xp")}
               </div>

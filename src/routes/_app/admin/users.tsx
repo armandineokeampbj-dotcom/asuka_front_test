@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { adminAPI, apiCall } from "@/lib/api-client";
-import { Users, Loader2, Search } from "lucide-react";
+import { Users, Loader2, Search, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useLang } from "@/i18n/LanguageProvider";
 
@@ -24,6 +26,9 @@ function AdminUsersPage() {
   const [notifBody, setNotifBody] = useState("");
   const [notifTarget, setNotifTarget] = useState("");
   const [sending, setSending] = useState(false);
+  const [editUser, setEditUser] = useState<any | null>(null);
+  const [editEmail, setEditEmail] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
   useEffect(() => {
     adminAPI.getUsers().then((data: any) => {
@@ -35,6 +40,30 @@ function AdminUsersPage() {
     const q = search.toLowerCase();
     return !q || u.email?.toLowerCase().includes(q) || u.firstName?.toLowerCase().includes(q) || u.lastName?.toLowerCase().includes(q);
   });
+
+  const openEditEmail = (u: any) => {
+    setEditUser(u);
+    setEditEmail(u.email ?? "");
+  };
+
+  const saveEmail = async () => {
+    if (!editUser || !editEmail.trim()) return;
+    const trimmed = editEmail.toLowerCase().trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      return toast.error("Email invalide");
+    }
+    setEditSaving(true);
+    try {
+      await adminAPI.updateUserEmail(editUser._id, trimmed);
+      setUsers((prev) => prev.map((u) => u._id === editUser._id ? { ...u, email: trimmed } : u));
+      toast.success("Email mis à jour");
+      setEditUser(null);
+    } catch (err: any) {
+      toast.error(err?.message || "Erreur lors de la mise à jour");
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   const sendNotif = async () => {
     if (!notifTitle || !notifTarget) return toast.error(t("admin_users_err_fields"));
@@ -91,7 +120,20 @@ function AdminUsersPage() {
                 ) : filtered.slice(0, 100).map((u) => (
                   <TableRow key={u._id}>
                     <TableCell className="font-medium">{u.firstName} {u.lastName}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{u.email}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate max-w-[180px]">{u.email}</span>
+                      {canEdit && (
+                        <button
+                          onClick={() => openEditEmail(u)}
+                          className="shrink-0 text-muted-foreground hover:text-foreground transition"
+                          title="Modifier l'email"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-[10px]">{u.role}</Badge>
                     </TableCell>
@@ -115,6 +157,38 @@ function AdminUsersPage() {
             <p className="text-xs text-muted-foreground text-center">{t("admin_users_showing")} {filtered.length}</p>
           )}
         </div>
+
+        {/* Dialog modification email */}
+        <Dialog open={!!editUser} onOpenChange={(open) => { if (!open) setEditUser(null); }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Modifier l'email</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <div className="text-xs text-muted-foreground">
+                Utilisateur : <span className="font-medium text-foreground">{editUser?.firstName} {editUser?.lastName}</span>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-email">Nouvel email</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") saveEmail(); }}
+                  placeholder="exemple@domaine.com"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditUser(null)} disabled={editSaving}>Annuler</Button>
+              <Button onClick={saveEmail} disabled={editSaving || !editEmail.trim()}>
+                {editSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Enregistrer"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Notification ciblée */}
         {canEdit && (

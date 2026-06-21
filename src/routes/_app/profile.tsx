@@ -352,11 +352,13 @@ function ProfilePage() {
   return (
     <div className="space-y-6">
       {/* HEADER */}
-      <Card className="relative overflow-hidden p-6 sm:p-8 border-border/50 bg-gradient-card">
+      <Card className="relative overflow-hidden p-4 sm:p-6 border-border/50 bg-gradient-card">
         <div className="absolute inset-0 bg-gradient-aurora opacity-50" />
-        <div className="relative flex flex-col sm:flex-row gap-6 items-start">
-          <div className="relative group">
-            <div className="h-20 w-20 rounded-2xl bg-gradient-hero flex items-center justify-center text-2xl font-black text-primary-foreground shadow-glow overflow-hidden">
+        <div className="relative flex items-start gap-3 sm:gap-5">
+
+          {/* Avatar */}
+          <div className="relative group shrink-0">
+            <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-gradient-hero flex items-center justify-center text-xl sm:text-2xl font-black text-primary-foreground shadow-glow overflow-hidden">
               {p.avatarUrl ? <img src={p.avatarUrl} alt="" className="w-full h-full object-cover" /> : (p.full_name || user?.email || "A")[0].toUpperCase()}
             </div>
             {p.avatarUrl && (
@@ -369,30 +371,46 @@ function ProfilePage() {
               </div>
             )}
           </div>
+
+          {/* Info + Completion */}
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold truncate">{p.preferred_name || p.full_name || user?.firstName || "User Profile"}</h1>
-            {p.country && <div className="text-sm text-muted-foreground flex items-center gap-1 mt-1"><MapPin className="h-3.5 w-3.5" />{[p.city, p.country].filter(Boolean).join(", ")}</div>}
-            <div className="flex flex-wrap items-center gap-2 mt-3 text-xs">
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary font-semibold"><Trophy className="h-3 w-3" /> Lv. {level}</span>
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-accent/15 text-foreground font-semibold"><Sparkles className="h-3 w-3 text-accent" /> {xp} XP</span>
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-muted font-semibold"><Flame className="h-3 w-3 text-accent" /> {streak}d</span>
+            {/* Name row + Completion */}
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-lg sm:text-2xl font-bold truncate">{p.preferred_name || p.full_name || user?.firstName || "User Profile"}</h1>
+                {p.country && <div className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1 mt-0.5"><MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5" />{[p.city, p.country].filter(Boolean).join(", ")}</div>}
+              </div>
+              <div className="text-right shrink-0">
+                <div className="text-[10px] text-muted-foreground">{t("prof_completion")}</div>
+                <div className="text-2xl sm:text-3xl font-bold text-gradient">{completion.score}%</div>
+                <Progress value={completion.score} className="h-1 sm:h-1.5 mt-1 w-16 sm:w-28 ml-auto" />
+              </div>
+            </div>
+
+            {/* Badges */}
+            <div className="flex flex-wrap items-center gap-1.5 mt-2 text-[11px] sm:text-xs">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold"><Trophy className="h-3 w-3" /> Lv. {level}</span>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent/15 text-foreground font-semibold"><Sparkles className="h-3 w-3 text-accent" /> {xp} XP</span>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted font-semibold"><Flame className="h-3 w-3 text-accent" /> {streak}d</span>
               {p.verifications && Object.values(p.verifications).some(Boolean) && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-success/15 text-success font-semibold"><ShieldCheck className="h-3 w-3" /> {t("prof_verified")}</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/15 text-success font-semibold"><ShieldCheck className="h-3 w-3" /> {t("prof_verified")}</span>
               )}
             </div>
-            <div className="mt-2 max-w-xs"><Progress value={xpPct} className="h-1.5" /><div className="text-[10px] text-muted-foreground mt-1">{xpInLevel} / 500 XP → Lv.{level + 1}</div></div>
-            <div className="flex flex-wrap gap-2 mt-3">
-              {labels.length ? labels.map((l) => <Badge key={l} className="bg-accent/20 text-foreground border-accent/30">{l}</Badge>) : <Badge variant="outline">{t("prof_identity")}</Badge>}
+
+            {/* XP bar */}
+            <div className="mt-1.5 max-w-[200px] sm:max-w-xs">
+              <Progress value={xpPct} className="h-1 sm:h-1.5" />
+              <div className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5">{xpInLevel} / 500 XP → Lv.{level + 1}</div>
             </div>
-          </div>
-          <div className="text-right shrink-0">
-            <div className="text-xs text-muted-foreground">{t("prof_completion")}</div>
-            <div className="text-3xl font-bold text-gradient">{completion.score}%</div>
-            <Progress value={completion.score} className="h-1.5 mt-2 w-32" />
+
+            {/* Identity labels */}
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {labels.length ? labels.map((l) => <Badge key={l} className="text-[10px] sm:text-xs bg-accent/20 text-foreground border-accent/30">{l}</Badge>) : <Badge variant="outline" className="text-[10px] sm:text-xs">{t("prof_identity")}</Badge>}
+            </div>
           </div>
         </div>
         {/* Readiness */}
-        <div className="relative mt-6 grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <div className="relative mt-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
           {[
             { k: "job", l: t("prof_readiness_job") },
             { k: "internship", l: t("prof_readiness_intern") },
@@ -413,7 +431,7 @@ function ProfilePage() {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="flex flex-wrap h-auto">
+        <TabsList className="flex overflow-x-auto h-auto w-full justify-start pb-1 [&>*]:shrink-0 [&>*]:text-xs sm:[&>*]:text-sm">
           <TabsTrigger value="overview">{t("prof_tab_overview")}</TabsTrigger>
           <TabsTrigger value="personal">{t("prof_tab_personal")}</TabsTrigger>
           <TabsTrigger value="education">{t("prof_tab_education")}</TabsTrigger>
@@ -643,7 +661,7 @@ function ProfilePage() {
           </Card>
 
           {/* Aperçu rapide */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
             {[
               { label: t("prof_stat_edu"), count: education.length, icon: GraduationCap, tab: "education", color: "text-primary bg-primary/10" },
               { label: t("prof_stat_exp"), count: exps.length, icon: Briefcase, tab: "experience", color: "text-accent bg-accent/10" },
@@ -671,7 +689,7 @@ function ProfilePage() {
           {/* Scores */}
           <Card className="p-6 border-border/50">
             <h3 className="font-semibold mb-5">{t("prof_scores")}</h3>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
               {[
                 { key: "employability", label: t("score_employability"), value: scores.employability ?? 60 },
                 { key: "leadership", label: t("score_leadership"), value: scores.leadership ?? 55 },

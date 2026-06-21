@@ -68,7 +68,7 @@ function PeacePage() {
       <Card className="relative overflow-hidden p-6 sm:p-8 border-border/50 bg-gradient-card">
         <div className="absolute inset-0 bg-gradient-aurora opacity-50" />
         <div className="relative">
-          <h1 className="text-3xl font-bold">{t("peace_title")}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">{t("peace_title")}</h1>
           <p className="text-muted-foreground mt-2">{t("peace_sub")}</p>
         </div>
       </Card>
@@ -182,7 +182,7 @@ function ReportSheet({ user, onClose, t, lang }: { user: any; onClose: () => voi
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-md rounded-t-3xl bg-background p-6 pb-10 shadow-elevated animate-slide-up">
+      <div className="w-full max-w-md rounded-t-3xl bg-background p-6 pb-10 shadow-elevated animate-slide-up max-h-[90vh] overflow-y-auto">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-xl font-bold">{t("report_issue")}</h3>
           <button
@@ -229,8 +229,8 @@ function ReportSheet({ user, onClose, t, lang }: { user: any; onClose: () => voi
               onChange={(e) => setDescription(e.target.value)}
               placeholder={t("desc_placeholder")}
               disabled={loading}
-              rows={4}
-              className="w-full resize-none rounded-2xl border border-border bg-card px-5 py-3.5 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary disabled:opacity-50"
+              rows={3}
+              className="w-full resize-none rounded-2xl border border-border bg-card px-5 py-3.5 text-sm sm:text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary disabled:opacity-50"
             />
           </div>
           <div>
