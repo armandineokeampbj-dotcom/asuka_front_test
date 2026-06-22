@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { computeCompletion } from "@/lib/profile-completion";
 import { getDisplayScores, calculateReadiness } from "@/lib/score-calculator";
 import { getDegreeListByLang, getDegreeLabelByLang } from "@/lib/education-data";
-import { getLocalizedName } from "@/lib/localize";
+import { getLocalizedName, getLangDisplayName } from "@/lib/localize";
 import { awardXp, awardBadgeIfMissing, notify } from "@/lib/asuka-actions";
 import {
   Sparkles, Trophy, Flame, Edit3, Plus, Trash2, GraduationCap, Briefcase,
@@ -944,7 +944,7 @@ function ProfilePage() {
                   { label: t("prof_residence_country"), value: p.residence_country },
                   { label: t("prof_city"), value: p.city },
                   { label: t("prof_phone"), value: p.phone },
-                  { label: t("prof_primary_lang"), value: p.preferred_language },
+                  { label: t("prof_primary_lang"), value: p.preferred_language ? getLangDisplayName(p.preferred_language, lang) : null },
                 ].map(({ label, value }) => (
                   <div key={String(label)}>
                     <div className="text-xs text-muted-foreground mb-0.5">{label}</div>
@@ -1280,6 +1280,24 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
   const [loadingCities, setLoadingCities] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Converts a stored display name ("Bénin") back to its 2-char code ("BJ") for the Select.
+  const nameToCode = (val: string, list: any[]): string => {
+    if (!val) return val;
+    if (val.length === 2 && list.some(c => c.code === val.toUpperCase())) return val.toUpperCase();
+    const found = list.find(c =>
+      c.name === val || c.name_fr === val || c.name_pt === val ||
+      c.name_ar === val || c.name_es === val || c.name_sw === val
+    );
+    return found?.code ?? val;
+  };
+
+  // Converts a 2-char code ("BJ") to the French display name ("Bénin") for storage.
+  const codeToFrName = (val: string, list: any[]): string => {
+    if (!val) return val;
+    const found = list.find(c => c.code === val);
+    return found?.name_fr || found?.name || val;
+  };
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -1287,11 +1305,18 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
           profileAPI.getCountries(),
           profileAPI.getLanguages(),
         ]);
-        setCountries(countriesRes.countries || []);
+        const loaded: any[] = countriesRes.countries || [];
+        setCountries(loaded);
         setLanguages(languagesRes.languages || []);
-        // Load cities based on residence_country
-        const rc = p.residence_country;
-        if (rc) {
+        // Resolve stored names → codes so the Select dropdowns find the right item
+        setF(prev => ({
+          ...prev,
+          nationality: nameToCode(prev.nationality, loaded),
+          residence_country: nameToCode(prev.residence_country, loaded),
+        }));
+        // Load cities using the resolved code
+        const rc = nameToCode(p.residence_country ?? "", loaded);
+        if (rc && rc.length === 2) {
           const citiesRes = await profileAPI.getCities(rc);
           setCities(citiesRes.cities || []);
         }
@@ -1387,7 +1412,12 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
     ];
     setSaving(true);
     try {
-      await onSave({ ...f, languages_spoken: allLangs });
+      await onSave({
+        ...f,
+        nationality: codeToFrName(f.nationality, countries),
+        residence_country: codeToFrName(f.residence_country, countries),
+        languages_spoken: allLangs,
+      });
       onClose();
     } finally {
       setSaving(false);
