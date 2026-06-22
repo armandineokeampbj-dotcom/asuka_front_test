@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { computeCompletion } from "@/lib/profile-completion";
 import { getDisplayScores, calculateReadiness } from "@/lib/score-calculator";
 import { getDegreeListByLang, getDegreeLabelByLang } from "@/lib/education-data";
+import { getLocalizedName } from "@/lib/localize";
 import { awardXp, awardBadgeIfMissing, notify } from "@/lib/asuka-actions";
 import {
   Sparkles, Trophy, Flame, Edit3, Plus, Trash2, GraduationCap, Briefcase,
@@ -169,7 +170,7 @@ function ProfilePage() {
   const profileSummary = useMemo(() => {
     if (!p) return "";
     const name = p.preferred_name || p.full_name || user?.firstName || t("prof_you");
-    const location = [p.city, p.country].filter(Boolean).join(", ");
+    const location = [p.city, p.residence_country].filter(Boolean).join(", ");
     const expCount = exps.length;
     const skillCount = skills.length;
     const score = completion.score;
@@ -244,7 +245,7 @@ function ProfilePage() {
     setAiBusy(true);
     try {
       const profilePayload = {
-        full_name: p.full_name, country: p.country, city: p.city, bio: p.bio,
+        full_name: p.full_name, country: p.residence_country, city: p.city, bio: p.bio,
         languages_spoken: p.languages_spoken, primary_language: p.primary_language,
         skills: skills.map((s) => ({ name: s.name, category: s.category, level: s.level })),
         education, experiences: exps, certifications: certs, portfolio,
@@ -378,7 +379,7 @@ function ProfilePage() {
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <h1 className="text-lg sm:text-2xl font-bold truncate">{p.preferred_name || p.full_name || user?.firstName || "User Profile"}</h1>
-                {p.country && <div className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1 mt-0.5"><MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5" />{[p.city, p.country].filter(Boolean).join(", ")}</div>}
+                {p.residence_country && <div className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1 mt-0.5"><MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5" />{[p.city, p.residence_country].filter(Boolean).join(", ")}</div>}
               </div>
               <div className="text-right shrink-0">
                 <div className="text-[10px] text-muted-foreground">{t("prof_completion")}</div>
@@ -882,12 +883,17 @@ function ProfilePage() {
                   {t("prof_cv_generated_on")} {new Date(p.cvGeneratedAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })}
                 </p>
               )}
-              {p.profileSlug && (
-                <div className="mt-3 pt-3 border-t border-border/50">
-                  <p className="text-xs text-muted-foreground mb-1.5">{t("pub_online")}</p>
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border border-border/50">
-                    <Globe className="h-3.5 w-3.5 text-primary shrink-0" />
-                    <span className="text-xs text-muted-foreground truncate flex-1">
+            </Card>
+
+            {/* Profil en ligne */}
+            <Card className="p-6 border-border/50">
+              <h3 className="font-semibold mb-1 flex items-center gap-2"><Globe className="h-4 w-4 text-primary" />{t("prof_online_title")}</h3>
+              <p className="text-sm text-muted-foreground mb-4">{t("prof_online_desc")}</p>
+              {p.profileSlug ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/50 border border-border/50">
+                    <Globe className="h-4 w-4 text-primary shrink-0" />
+                    <span className="text-sm text-foreground truncate flex-1 font-mono">
                       {window.location.origin}/p/{p.profileSlug}
                     </span>
                     <button
@@ -895,12 +901,23 @@ function ProfilePage() {
                         navigator.clipboard.writeText(`${window.location.origin}/p/${p.profileSlug}`);
                         toast.success(t("pub_link_copied"));
                       }}
-                      className="shrink-0 text-muted-foreground hover:text-primary"
+                      className="shrink-0 text-muted-foreground hover:text-primary transition"
+                      title={t("pub_link_copied")}
                     >
-                      <Copy className="h-3.5 w-3.5" />
+                      <Copy className="h-4 w-4" />
                     </button>
                   </div>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => window.open(`/p/${p.profileSlug}`, "_blank")}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    {t("prof_online_view")}
+                  </Button>
                 </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">{t("prof_online_not_ready")}</p>
               )}
             </Card>
           </div>
@@ -1445,7 +1462,7 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
               <SelectTrigger><SelectValue placeholder={t("prof_select_country")} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="null">{t("prof_not_specified")}</SelectItem>
-                {countries.map((c) => <SelectItem key={c.code} value={c.code}>{c.name_fr || c.name}</SelectItem>)}
+                {countries.map((c) => <SelectItem key={c.code} value={c.code}>{getLocalizedName(c, lang)}</SelectItem>)}
               </SelectContent>
             </Select>
           </Field>
@@ -1461,7 +1478,7 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
               <SelectTrigger><SelectValue placeholder={t("prof_select_country")} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="null">{t("prof_not_specified")}</SelectItem>
-                {countries.map((c) => <SelectItem key={c.code} value={c.code}>{c.name_fr || c.name}</SelectItem>)}
+                {countries.map((c) => <SelectItem key={c.code} value={c.code}>{getLocalizedName(c, lang)}</SelectItem>)}
               </SelectContent>
             </Select>
           </Field>
@@ -1481,7 +1498,7 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="null">{t("prof_not_specified")}</SelectItem>
-                  {cities.map((c, idx) => <SelectItem key={idx} value={c.name}>{c.name_fr || c.name}</SelectItem>)}
+                  {cities.map((c, idx) => <SelectItem key={idx} value={c.name}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             )}
@@ -1493,6 +1510,19 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
       <div className="space-y-3">
         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" />{t("prof_section_contact")}</div>
         <div className="grid sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
+            <Field label={t("prof_email")}>
+              <div className="relative">
+                <Input
+                  value={p.email ?? ""}
+                  disabled
+                  className="pr-9 text-muted-foreground bg-muted/40 cursor-not-allowed"
+                />
+                <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50 pointer-events-none" />
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">{t("prof_email_readonly")}</p>
+            </Field>
+          </div>
           <Field label={t("prof_phone")}>
             <Input
               value={f.phone}
@@ -1505,7 +1535,7 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
               <SelectTrigger><SelectValue placeholder={t("prof_select_language")} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="null">{t("prof_not_specified")}</SelectItem>
-                {languages.map((l) => <SelectItem key={l.code} value={l.code}>{l.name_fr || l.name}</SelectItem>)}
+                {languages.map((l) => <SelectItem key={l.code} value={l.code}>{getLocalizedName(l, lang)}</SelectItem>)}
               </SelectContent>
             </Select>
           </Field>
@@ -1609,7 +1639,7 @@ function EducationSection({ items, t, userId, reload }: any) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold truncate">{e.field || "—"}</div>
-                  <div className="text-sm text-muted-foreground">{e.degree && <span className="mr-1">{getDegreeLabelByLang(e.degree, lang as "en" | "fr")} ·</span>}{e.institution}{e.country ? `, ${e.country}` : ""}</div>
+                  <div className="text-sm text-muted-foreground">{e.degree && <span className="mr-1">{getDegreeLabelByLang(e.degree, lang)} ·</span>}{e.institution}{e.country ? `, ${e.country}` : ""}</div>
                   <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><Calendar className="h-3 w-3" />{fmtDate(e.startDate)} → {e.currentlyStudying ? t("prof_now") : fmtDate(e.endDate)}</div>
                   {e.description && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{e.description}</p>}
                 </div>
@@ -1641,7 +1671,7 @@ function EduDialog({ userId, t, reload }: any) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [f, setF] = useState<Edu>({ institution: "", degree: "", field: "", country: "", currentlyStudying: false });
-  const degreeOptions = useMemo(() => getDegreeListByLang(lang as "en" | "fr"), [lang]);
+  const degreeOptions = useMemo(() => getDegreeListByLang(lang), [lang]);
 
   const submit = async () => {
     if (!f.institution) return toast.error(t("prof_institution_required"));
@@ -1724,7 +1754,7 @@ function EditEduDialog({ education, userId, t, reload }: any) {
     currentlyStudying: education.currentlyStudying ?? false,
     description: education.description ?? "",
   });
-  const degreeOptions = useMemo(() => getDegreeListByLang(lang as "en" | "fr"), [lang]);
+  const degreeOptions = useMemo(() => getDegreeListByLang(lang), [lang]);
 
   const submit = async () => {
     if (!f.institution) return toast.error(t("prof_institution_required"));

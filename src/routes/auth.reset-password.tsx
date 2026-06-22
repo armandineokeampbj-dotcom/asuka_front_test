@@ -3,21 +3,23 @@ import { FormEvent, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card } from '@/components/ui/card';
 import { API_BASE_URL } from '@/lib/api';
 import { Logo } from '@/components/asuka/Logo';
 import { LanguageSwitcher } from '@/components/asuka/LanguageSwitcher';
+import { ThemeToggle } from '@/components/asuka/ThemeToggle';
 import { useLang } from '@/i18n/LanguageProvider';
+import { Lock, Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
 
 interface ResetPasswordSearch {
   token?: string;
 }
 
 export const Route = createFileRoute('/auth/reset-password')({
-  validateSearch: (search: Record<string, unknown>): ResetPasswordSearch => {
-    return {
-      token: search.token as string | undefined,
-    };
-  },
+  validateSearch: (search: Record<string, unknown>): ResetPasswordSearch => ({
+    token: search.token as string | undefined,
+  }),
   component: ResetPassword,
 });
 
@@ -56,227 +58,172 @@ function ResetPassword() {
     calculatePasswordStrength(value);
   };
 
-  const getPasswordStrengthColor = () => {
-    if (passwordStrength < 40) return 'bg-red-500';
-    if (passwordStrength < 70) return 'bg-yellow-500';
-    return 'bg-green-500';
-  };
-
-  const getPasswordStrengthText = () => {
-    if (passwordStrength < 40) return t('reset_strength_weak');
-    if (passwordStrength < 70) return t('reset_strength_medium');
-    return t('reset_strength_strong');
-  };
+  const strengthColor = passwordStrength < 40 ? 'bg-destructive' : passwordStrength < 70 ? 'bg-yellow-500' : 'bg-success';
+  const strengthText = passwordStrength < 40 ? t('reset_strength_weak') : passwordStrength < 70 ? t('reset_strength_medium') : t('reset_strength_strong');
+  const strengthTextColor = passwordStrength < 40 ? 'text-destructive' : passwordStrength < 70 ? 'text-yellow-500' : 'text-success';
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    if (!newPassword || !confirmPassword) {
-      toast.error(t('reset_fill_all'));
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      toast.error(t('reset_min_8'));
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      toast.error(t('reset_mismatch'));
-      return;
-    }
+    if (!newPassword || !confirmPassword) { toast.error(t('reset_fill_all')); return; }
+    if (newPassword.length < 8) { toast.error(t('reset_min_8')); return; }
+    if (newPassword !== confirmPassword) { toast.error(t('reset_mismatch')); return; }
 
     setLoading(true);
-
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          token: search.token,
-          new_password: newPassword,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: search.token, new_password: newPassword }),
       });
-
       const data = await response.json();
-
       if (!response.ok) {
         toast.error(data.error?.message || data.message || t('error_occurred'));
-
         if (data.error?.code === 'TOKEN_EXPIRED') {
-          setTimeout(() => {
-            navigate({ to: '/auth/forgot-password' });
-          }, 2000);
+          setTimeout(() => navigate({ to: '/auth/forgot-password' }), 2000);
         }
         return;
       }
-
       toast.success(t('reset_success'));
-
-      setTimeout(() => {
-        navigate({ to: '/auth?mode=signin' });
-      }, 3000);
-    } catch (error) {
+      setTimeout(() => navigate({ to: '/auth?mode=signin' }), 3000);
+    } catch {
       toast.error(t('network_error'));
-      console.error('Reset password error:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  const passwordsMatch = confirmPassword && newPassword === confirmPassword;
+  const canSubmit = !loading && newPassword.length >= 8 && passwordsMatch;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50 p-4">
-      <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between">
+    <div className="relative min-h-screen flex items-center justify-center px-4 py-10">
+      <div className="absolute inset-0 bg-gradient-aurora pointer-events-none" />
+
+      <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
         <Logo />
-        <LanguageSwitcher />
-      </div>
-
-      <div className="w-full max-w-md mt-12">
-        <div className="bg-white rounded-lg shadow-lg p-8 border border-gray-100">
-          <div className="mb-8">
-            <div className="flex items-center justify-center mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.08 5.919m7.08-5.919a6 6 0 00-7.08-5.919m7.08 5.919L15 7m-6 8l-2.293-2.293a1 1 0 00-1.414 1.414l.707.707-2.414 2.414a1 1 0 001.414 1.414l2.414-2.414.707.707a1 1 0 001.414-1.414L9 15" />
-                </svg>
-              </div>
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 text-center mb-2">
-              {t('reset_title')}
-            </h1>
-            <p className="text-gray-600 text-center text-sm">
-              {t('reset_subtitle')}
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-2">
-                {t('reset_new_pwd')}
-              </label>
-              <div className="relative">
-                <Input
-                  id="new-password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder={t('reset_new_pwd_placeholder')}
-                  value={newPassword}
-                  onChange={handlePasswordChange}
-                  disabled={loading}
-                  className="w-full pr-10"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  disabled={loading}
-                >
-                  {showPassword ? (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                      <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
-                      <path d="M15.171 13.576l1.474 1.474a1 1 0 00.707.293H18a1 1 0 00.707-1.707l-14-14a1 1 0 00-1.414 1.414l1.473 1.473A10.014 10.014 0 00.458 10C1.732 14.057 5.522 17 10 17a9.958 9.958 0 004.512-1.074l1.78 1.781a1 1 0 001.414-1.414l-14-14z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-
-              {newPassword && (
-                <div className="mt-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-gray-600">{t('reset_strength')}</span>
-                    <span className={`text-xs font-semibold ${
-                      passwordStrength < 40 ? 'text-red-600' :
-                      passwordStrength < 70 ? 'text-yellow-600' :
-                      'text-green-600'
-                    }`}>
-                      {getPasswordStrengthText()}
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                    <div
-                      className={`h-full ${getPasswordStrengthColor()} transition-all duration-300`}
-                      style={{ width: `${passwordStrength}%` }}
-                    />
-                  </div>
-                  <p className="mt-2 text-xs text-gray-500">
-                    {t('reset_criteria_1')}<br />
-                    {t('reset_criteria_2')}<br />
-                    {t('reset_criteria_3')}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-2">
-                {t('reset_confirm_pwd')}
-              </label>
-              <div className="relative">
-                <Input
-                  id="confirm-password"
-                  type={showConfirm ? 'text' : 'password'}
-                  placeholder={t('reset_confirm_placeholder')}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  disabled={loading}
-                  className="w-full pr-10"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm(!showConfirm)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  disabled={loading}
-                >
-                  {showConfirm ? (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                      <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
-                      <path d="M15.171 13.576l1.474 1.474a1 1 0 00.707.293H18a1 1 0 00.707-1.707l-14-14a1 1 0 00-1.414 1.414l1.473 1.473A10.014 10.014 0 00.458 10C1.732 14.057 5.522 17 10 17a9.958 9.958 0 004.512-1.074l1.78 1.781a1 1 0 001.414-1.414l-14-14z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-              {confirmPassword && newPassword !== confirmPassword && (
-                <p className="mt-2 text-xs text-red-600">
-                  {t('reset_mismatch')}
-                </p>
-              )}
-            </div>
-
-            <Button
-              type="submit"
-              disabled={loading || !newPassword || !confirmPassword || newPassword !== confirmPassword || newPassword.length < 8}
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-2 rounded-lg transition duration-300"
-            >
-              {loading ? t('reset_submitting') : t('reset_submit')}
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              {t('reset_remember')}{' '}
-              <button
-                onClick={() => navigate({ to: '/auth?mode=signin' })}
-                className="text-purple-600 hover:text-purple-700 font-semibold"
-              >
-                {t('forgot_back_signin')}
-              </button>
-            </p>
-          </div>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <LanguageSwitcher />
         </div>
       </div>
+
+      <Card className="relative w-full max-w-md p-8 glass border-border/50 shadow-glow mt-12">
+        <div className="mb-6">
+          <div className="flex justify-center mb-4">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Lock className="h-6 w-6 text-primary" />
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold text-foreground text-center">{t('reset_title')}</h1>
+          <p className="text-muted-foreground text-center text-sm mt-1">{t('reset_subtitle')}</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Nouveau mot de passe */}
+          <div>
+            <Label htmlFor="new-password">{t('reset_new_pwd')}</Label>
+            <div className="relative mt-1">
+              <Input
+                id="new-password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder={t('reset_new_pwd_placeholder')}
+                value={newPassword}
+                onChange={handlePasswordChange}
+                disabled={loading}
+                className="pr-10"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
+                disabled={loading}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+
+            {newPassword && (
+              <div className="mt-2 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">{t('reset_strength')}</span>
+                  <span className={`text-xs font-semibold ${strengthTextColor}`}>{strengthText}</span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className={`h-full ${strengthColor} transition-all duration-300`}
+                    style={{ width: `${passwordStrength}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t('reset_criteria_1')}<br />
+                  {t('reset_criteria_2')}<br />
+                  {t('reset_criteria_3')}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Confirmer mot de passe */}
+          <div>
+            <Label htmlFor="confirm-password">{t('reset_confirm_pwd')}</Label>
+            <div className="relative mt-1">
+              <Input
+                id="confirm-password"
+                type={showConfirm ? 'text' : 'password'}
+                placeholder={t('reset_confirm_placeholder')}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={loading}
+                className="pr-10"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirm(!showConfirm)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
+                disabled={loading}
+              >
+                {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            {confirmPassword && !passwordsMatch && (
+              <p className="mt-1.5 text-xs text-destructive">{t('reset_mismatch')}</p>
+            )}
+          </div>
+
+          <Button
+            type="submit"
+            disabled={!canSubmit}
+            className="w-full bg-gradient-hero border-0"
+          >
+            {loading ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t('reset_submitting')}</>
+            ) : t('reset_submit')}
+          </Button>
+        </form>
+
+        <div className="mt-6 pt-5 border-t border-border/50 text-center text-sm text-muted-foreground">
+          <p>
+            {t('reset_remember')}{' '}
+            <button
+              onClick={() => navigate({ to: '/auth?mode=signin' })}
+              className="text-primary hover:underline font-medium"
+            >
+              {t('forgot_back_signin')}
+            </button>
+          </p>
+        </div>
+
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => navigate({ to: '/' })}
+            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 mx-auto"
+          >
+            <ArrowLeft className="h-3 w-3" /> Asuka One
+          </button>
+        </div>
+      </Card>
     </div>
   );
 }

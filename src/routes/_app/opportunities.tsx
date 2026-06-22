@@ -144,7 +144,7 @@ function Opps() {
     skills: [...(profile?.skills ?? []), ...skillsV2],
     interests: profile?.interests ?? [],
     goals: profile?.goals ?? [],
-    country: profile?.country,
+    country: profile?.residence_country,
     primary_language: profile?.primary_language,
     languages_spoken: profile?.languages_spoken ?? [],
     remote_available: profile?.remote_available,

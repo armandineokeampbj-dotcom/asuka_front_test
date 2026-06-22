@@ -11,6 +11,7 @@ import { Logo } from "@/components/asuka/Logo";
 import { LanguageSwitcher } from "@/components/asuka/LanguageSwitcher";
 import { ThemeToggle } from "@/components/asuka/ThemeToggle";
 import { CountryPhoneSelector, type Country } from "@/components/asuka/CountryPhoneSelector";
+import { Eye, EyeOff } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -36,6 +37,7 @@ function AuthPage() {
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   const [busy, setBusy] = useState(false);
   const [signinError, setSigninError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Synchroniser le mode avec les paramètres de recherche
   useEffect(() => {
@@ -144,15 +146,25 @@ function AuthPage() {
               </div>
               <div>
                 <Label htmlFor="pw">{t("auth_password")}</Label>
-                <Input
-                  id="pw"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  className="mt-1"
-                />
+                <div className="relative mt-1">
+                  <Input
+                    id="pw"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={8}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
 
               {/* Afficher le lien de mot de passe oublié en cas d'erreur */}
@@ -181,12 +193,13 @@ function AuthPage() {
               onClick={() => { 
                 const newMode = mode === "signin" ? "signup" : "signin";
                 nav({ to: "/auth", search: { mode: newMode } });
-                setEmail(""); 
-                setPassword(""); 
-                setFullName(""); 
-                setPhone(""); 
+                setEmail("");
+                setPassword("");
+                setFullName("");
+                setPhone("");
                 setSelectedCountry(null);
-                setSigninError(null); 
+                setSigninError(null);
+                setShowPassword(false);
               }}
               className="mt-5 text-sm text-muted-foreground hover:text-foreground w-full text-center"
             >
