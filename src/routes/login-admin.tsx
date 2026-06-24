@@ -37,6 +37,11 @@ function LoginAdminPage() {
         return;
       }
 
+      if (user.mustCompleteProfile) {
+        navigate({ to: "/admin/first-login/complete-profile" });
+        return;
+      }
+
       navigate({ to: "/admin/dashboard" });
     } catch (err) {
       setError(err instanceof Error ? err.message : t("admin_login_failed"));

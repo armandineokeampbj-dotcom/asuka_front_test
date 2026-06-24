@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthProvider";
+import type { User } from "@/context/AuthProvider";
 import { authExtrasAPI } from "@/lib/api-client";
 import { KeyRound, Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
@@ -13,7 +14,7 @@ export const Route = createFileRoute("/_app/admin/first-login/change-password")(
 
 function ChangePasswordPage() {
   const { t } = useLang();
-  const { updateUserFlags } = useAuth();
+  const { user, updateUserFlags, setAuthData } = useAuth();
   const navigate = useNavigate();
 
   const [newPassword, setNewPassword] = useState("");
@@ -34,8 +35,12 @@ function ChangePasswordPage() {
 
     setSaving(true);
     try {
-      await authExtrasAPI.changePassword({ newPassword });
-      updateUserFlags({ mustChangePassword: false });
+      const result = await authExtrasAPI.changePassword({ newPassword });
+      if (result?.token && user) {
+        setAuthData(result.token, { ...(user as User), mustChangePassword: false });
+      } else {
+        updateUserFlags({ mustChangePassword: false });
+      }
       toast.success(t("admin_fl_pw_success"));
       navigate({ to: "/admin/first-login/complete-profile" });
     } catch (err: any) {

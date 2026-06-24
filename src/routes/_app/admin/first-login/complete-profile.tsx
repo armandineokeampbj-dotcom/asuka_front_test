@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthProvider";
+import type { User } from "@/context/AuthProvider";
 import { authExtrasAPI, profileAPI } from "@/lib/api-client";
 import { UserCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -13,7 +14,7 @@ export const Route = createFileRoute("/_app/admin/first-login/complete-profile")
 
 function CompleteProfilePage() {
   const { t } = useLang();
-  const { user, updateUserFlags } = useAuth();
+  const { user, updateUserFlags, setAuthData } = useAuth();
   const navigate = useNavigate();
 
   const [firstName, setFirstName] = useState("");
@@ -36,13 +37,17 @@ function CompleteProfilePage() {
         ...(phone.trim() ? { phone: phone.trim() } : {}),
       });
 
-      // Clear the mustCompleteProfile flag and sync adminProfile
-      await authExtrasAPI.completeProfileFlag({
+      // Clear the mustCompleteProfile flag, sync adminProfile, get fresh JWT
+      const flagResult = await authExtrasAPI.completeProfileFlag({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
       });
 
-      updateUserFlags({ mustCompleteProfile: false });
+      if (flagResult?.token && user) {
+        setAuthData(flagResult.token, { ...(user as User), mustCompleteProfile: false, firstName: firstName.trim(), lastName: lastName.trim() });
+      } else {
+        updateUserFlags({ mustCompleteProfile: false });
+      }
       toast.success(t("admin_fl_complete_success"));
       navigate({ to: "/admin/dashboard" });
     } catch (err: any) {

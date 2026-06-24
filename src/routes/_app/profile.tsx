@@ -68,9 +68,9 @@ function Ring({ value, label, quality }: { value: number; label: string; quality
   );
 }
 
-function fmtDate(d?: string | null) {
+function fmtDate(d?: string | null, lang?: string) {
   if (!d) return "";
-  try { return new Date(d).toLocaleDateString(undefined, { year: "numeric", month: "short" }); } catch { return d; }
+  try { return new Date(d).toLocaleDateString(lang || undefined, { year: "numeric", month: "short" }); } catch { return d; }
 }
 
 function skillLevelColor(level: number) {
@@ -102,6 +102,8 @@ function ProfilePage() {
   const [importBusy, setImportBusy] = useState(false);
   const [importSummary, setImportSummary] = useState<any>(null);
 
+  const [countryList, setCountryList] = useState<any[]>([]);
+
   const [showPersonalForm, setShowPersonalForm] = useState(false);
   const [showAspirationsForm, setShowAspirationsForm] = useState(false);
   const [showSocialForm, setShowSocialForm] = useState(false);
@@ -131,6 +133,22 @@ function ProfilePage() {
   };
 
   useEffect(() => { reload(); }, [user?.id]);
+
+  useEffect(() => {
+    profileAPI.getCountries().then((r: any) => setCountryList(r.countries || [])).catch(() => {});
+  }, []);
+
+  // Resolves a stored value (code "BJ" or French name "Bénin" or any language name)
+  // to the display name in the visitor's current language.
+  const resolveCountryName = (val: string | null | undefined): string | null => {
+    if (!val) return null;
+    const found = countryList.find(c =>
+      c.code === val || c.name === val || c.name_fr === val ||
+      c.name_pt === val || c.name_ar === val || c.name_es === val || c.name_sw === val
+    );
+    if (found) return getLocalizedName(found, lang);
+    return val;
+  };
 
   const completion = useMemo(
     () => computeCompletion({ profile: p, educationCount: education.length, experienceCount: exps.length, skillsCount: skills.length, certificationsCount: certs.length, portfolioCount: portfolio.length }),
@@ -170,7 +188,7 @@ function ProfilePage() {
   const profileSummary = useMemo(() => {
     if (!p) return "";
     const name = p.preferred_name || p.full_name || user?.firstName || t("prof_you");
-    const location = [p.city, p.residence_country].filter(Boolean).join(", ");
+    const location = [p.city, resolveCountryName(p.residence_country)].filter(Boolean).join(", ");
     const expCount = exps.length;
     const skillCount = skills.length;
     const score = completion.score;
@@ -379,7 +397,7 @@ function ProfilePage() {
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <h1 className="text-lg sm:text-2xl font-bold truncate">{p.preferred_name || p.full_name || user?.firstName || "User Profile"}</h1>
-                {p.residence_country && <div className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1 mt-0.5"><MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5" />{[p.city, p.residence_country].filter(Boolean).join(", ")}</div>}
+                {p.residence_country && <div className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1 mt-0.5"><MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5" />{[p.city, resolveCountryName(p.residence_country)].filter(Boolean).join(", ")}</div>}
               </div>
               <div className="text-right shrink-0">
                 <div className="text-[10px] text-muted-foreground">{t("prof_completion")}</div>
@@ -448,7 +466,7 @@ function ProfilePage() {
         <TabsContent value="overview" className="space-y-6 mt-6">
 
           {/* Résumé du profil */}
-          <Card className="p-6 border-border/50 bg-gradient-card">
+          <Card className="p-4 sm:p-6 border-border/50 bg-gradient-card">
             <div className="flex items-start gap-4">
               <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                 <User className="h-5 w-5 text-primary" />
@@ -483,7 +501,7 @@ function ProfilePage() {
           </Card>
 
           {/* Import IA profil */}
-          <Card className="p-6 border-border/50 bg-gradient-card">
+          <Card className="p-4 sm:p-6 border-border/50 bg-gradient-card">
             <div className="flex items-start gap-4">
               <div className="h-10 w-10 rounded-xl bg-accent/15 flex items-center justify-center shrink-0">
                 <Wand2 className="h-5 w-5 text-accent" />
@@ -688,7 +706,7 @@ function ProfilePage() {
           </div>
 
           {/* Scores */}
-          <Card className="p-6 border-border/50">
+          <Card className="p-4 sm:p-6 border-border/50">
             <h3 className="font-semibold mb-5">{t("prof_scores")}</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
               {[
@@ -704,9 +722,9 @@ function ProfilePage() {
             </div>
           </Card>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Insights IA */}
-            <Card ref={insightsCardRef} className={`p-6 border-border/50 transition-all duration-700 ${insightsHighlighted ? "ring-2 ring-primary/60 shadow-glow" : ""}`}>
+            <Card ref={insightsCardRef} className={`p-4 sm:p-6 border-border/50 transition-all duration-700 ${insightsHighlighted ? "ring-2 ring-primary/60 shadow-glow" : ""}`}>
               {insightsHighlighted && (
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary/5 border border-primary/20 rounded-lg px-3 py-1.5 mb-3">
                   <Sparkles className="h-3 w-3 shrink-0" />
@@ -848,12 +866,12 @@ function ProfilePage() {
             </Dialog>
 
             {/* Badges */}
-            <Card className="p-6 border-border/50">
+            <Card className="p-4 sm:p-6 border-border/50">
               <h3 className="font-semibold mb-3">{t("prof_badges")}</h3>
               {badges.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{t("prof_badges_empty")}</p>
               ) : (
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {badges.map((b: any) => (
                     <div key={b.badge_id} className="flex flex-col items-center gap-1 p-3 rounded-xl bg-muted text-center">
                       <div className="text-2xl">{b.badges?.icon ?? "🏅"}</div>
@@ -865,7 +883,7 @@ function ProfilePage() {
             </Card>
 
             {/* CV IA */}
-            <Card className="p-6 border-border/50">
+            <Card className="p-4 sm:p-6 border-border/50">
               <h3 className="font-semibold mb-3 flex items-center gap-2"><FileText className="h-4 w-4 text-primary" />{t("prof_cv_title")}</h3>
               <p className="text-sm text-muted-foreground mb-3">{t("prof_cv_desc")}</p>
               <Button onClick={generateCv} disabled={cvBusy} className="bg-gradient-hero shadow-glow border-0 w-full">
@@ -886,14 +904,14 @@ function ProfilePage() {
             </Card>
 
             {/* Profil en ligne */}
-            <Card className="p-6 border-border/50">
+            <Card className="p-4 sm:p-6 border-border/50">
               <h3 className="font-semibold mb-1 flex items-center gap-2"><Globe className="h-4 w-4 text-primary" />{t("prof_online_title")}</h3>
               <p className="text-sm text-muted-foreground mb-4">{t("prof_online_desc")}</p>
               {p.profileSlug ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/50 border border-border/50">
                     <Globe className="h-4 w-4 text-primary shrink-0" />
-                    <span className="text-sm text-foreground truncate flex-1 font-mono">
+                    <span className="text-sm text-foreground truncate flex-1 min-w-0 font-mono">
                       {window.location.origin}/p/{p.profileSlug}
                     </span>
                     <button
@@ -928,20 +946,20 @@ function ProfilePage() {
           {showPersonalForm ? (
             <PersonalForm p={p} t={t} onSave={saveProfile} onClose={() => setShowPersonalForm(false)} />
           ) : (
-            <Card className="p-6 border-border/50 bg-gradient-card space-y-5">
+            <Card className="p-4 sm:p-6 border-border/50 bg-gradient-card space-y-5">
               <div className="flex items-start justify-between gap-3">
                 <h3 className="font-semibold flex items-center gap-2"><User className="h-4 w-4 text-primary" />{t("prof_personal_info")}</h3>
                 <Button size="sm" variant="outline" onClick={() => setShowPersonalForm(true)}>
                   <Edit3 className="h-4 w-4 mr-1.5" />{t("prof_edit")}
                 </Button>
               </div>
-              <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                 {[
                   { label: t("prof_preferred_name"), value: p.preferred_name || p.full_name },
                   { label: t("prof_gender"), value: p.gender ? (t(`prof_gender_${p.gender}` as any) || p.gender) : null },
-                  { label: t("prof_dob"), value: p.date_of_birth ? fmtDate(p.date_of_birth) : null },
-                  { label: t("prof_nationality"), value: p.nationality },
-                  { label: t("prof_residence_country"), value: p.residence_country },
+                  { label: t("prof_dob"), value: p.date_of_birth ? fmtDate(p.date_of_birth, lang) : null },
+                  { label: t("prof_nationality"), value: resolveCountryName(p.nationality) },
+                  { label: t("prof_residence_country"), value: resolveCountryName(p.residence_country) },
                   { label: t("prof_city"), value: p.city },
                   { label: t("prof_phone"), value: p.phone },
                   { label: t("prof_primary_lang"), value: p.preferred_language ? getLangDisplayName(p.preferred_language, lang) : null },
@@ -956,7 +974,7 @@ function ProfilePage() {
                 <div>
                   <div className="text-xs text-muted-foreground mb-1.5">{t("prof_languages")}</div>
                   <div className="flex flex-wrap gap-1.5">
-                    {p.languages_spoken.map((l: string) => <Badge key={l} variant="secondary" className="text-xs">{l}</Badge>)}
+                    {p.languages_spoken.map((l: string) => <Badge key={l} variant="secondary" className="text-xs">{getLangLabel(l, lang)}</Badge>)}
                   </div>
                 </div>
               )}
@@ -1001,7 +1019,7 @@ function ProfilePage() {
           {showAspirationsForm ? (
             <AspirationsForm p={p} t={t} onSave={saveProfile} onClose={() => setShowAspirationsForm(false)} />
           ) : (
-            <Card className="p-6 border-border/50 bg-gradient-card space-y-5">
+            <Card className="p-4 sm:p-6 border-border/50 bg-gradient-card space-y-5">
               <div className="flex items-start justify-between gap-3">
                 <h3 className="font-semibold flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-primary" />
@@ -1075,7 +1093,7 @@ function ProfilePage() {
           {showSocialForm ? (
             <SocialLinksForm p={p} t={t} lang={lang} onSave={saveProfile} onClose={() => setShowSocialForm(false)} />
           ) : (
-            <Card className="p-6 border-border/50 bg-gradient-card space-y-5">
+            <Card className="p-4 sm:p-6 border-border/50 bg-gradient-card space-y-5">
               <div className="flex items-start justify-between gap-3">
                 <h3 className="font-semibold flex items-center gap-2">
                   <Globe className="h-4 w-4 text-primary" />
@@ -1089,7 +1107,7 @@ function ProfilePage() {
               {/* Réseaux sociaux */}
               <div className="space-y-3">
                 <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("prof_section_social")}</div>
-                <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                   {[
                     { label: t("prof_port_linkedin"), value: (p.social_links as any)?.linkedin as string | undefined, Icon: Linkedin },
                     { label: t("prof_port_github"),   value: (p.social_links as any)?.github   as string | undefined, Icon: Github },
@@ -1120,7 +1138,7 @@ function ProfilePage() {
               {/* Médias */}
               <div className="space-y-3 pt-3 border-t border-border/30">
                 <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("prof_section_media")}</div>
-                <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                   <div>
                     <div className="text-xs text-muted-foreground mb-0.5 flex items-center gap-1">
                       <Link2 className="h-3 w-3" />{t("prof_port_video")}
@@ -1154,7 +1172,7 @@ function ProfilePage() {
 
         {/* TIMELINE */}
         <TabsContent value="timeline" className="mt-6">
-          <Card className="p-6 border-border/50">
+          <Card className="p-4 sm:p-6 border-border/50">
             <h3 className="font-semibold mb-4">{t("prof_timeline_title")}</h3>
             {xpEvents.length === 0 ? <p className="text-sm text-muted-foreground">{t("prof_timeline_empty")}</p> : (
               <>
@@ -1186,7 +1204,7 @@ function ProfilePage() {
 
         {/* PRIVACY */}
         <TabsContent value="privacy" className="mt-6 space-y-4">
-          <Card className="p-6 border-border/50 bg-gradient-card">
+          <Card className="p-4 sm:p-6 border-border/50 bg-gradient-card">
             <h3 className="font-semibold mb-4 flex items-center gap-2"><Eye className="h-4 w-4 text-primary" />{t("prof_privacy_title")}</h3>
             <div className="space-y-2">
               {[
@@ -1247,6 +1265,31 @@ const COMMON_LANGUAGES = [
   "Bambara", "Peul / Fulfulde", "Dioula", "Lingala", "Yoruba", "Igbo",
   "Twi", "Moore", "Soninké", "Mandingue",
 ];
+
+// Localized display names for each stored language key.
+// Keys match the values stored in DB (COMMON_LANGUAGES entries).
+const LANGUAGE_LABELS: Record<string, Record<string, string>> = {
+  "Français":        { fr: "Français",        en: "French",      pt: "Francês",      ar: "الفرنسية",    es: "Francés",    sw: "Kifaransa" },
+  "English":         { fr: "Anglais",          en: "English",     pt: "Inglês",       ar: "الإنجليزية",  es: "Inglés",     sw: "Kiingereza" },
+  "Arabe":           { fr: "Arabe",            en: "Arabic",      pt: "Árabe",        ar: "العربية",     es: "Árabe",      sw: "Kiarabu" },
+  "Portugais":       { fr: "Portugais",        en: "Portuguese",  pt: "Português",    ar: "البرتغالية",  es: "Portugués",  sw: "Kireno" },
+  "Wolof":           { fr: "Wolof",            en: "Wolof",       pt: "Wolof",        ar: "الولوف",      es: "Wolof",      sw: "Wolof" },
+  "Haoussa":         { fr: "Haoussa",          en: "Hausa",       pt: "Hauçá",        ar: "الهوسا",      es: "Hausa",      sw: "Kihausa" },
+  "Bambara":         { fr: "Bambara",          en: "Bambara",     pt: "Bambara",      ar: "البامبارا",   es: "Bambara",    sw: "Kibambara" },
+  "Peul / Fulfulde": { fr: "Peul / Fulfulde",  en: "Fula",        pt: "Fula",         ar: "الفولا",      es: "Fula",       sw: "Kifula" },
+  "Dioula":          { fr: "Dioula",           en: "Dyula",       pt: "Dioula",       ar: "الديولا",     es: "Diula",      sw: "Dioula" },
+  "Lingala":         { fr: "Lingala",          en: "Lingala",     pt: "Lingala",      ar: "اللينغالا",   es: "Lingala",    sw: "Kilingala" },
+  "Yoruba":          { fr: "Yoruba",           en: "Yoruba",      pt: "Iorubá",       ar: "اليوروبا",    es: "Yoruba",     sw: "Kiyoruba" },
+  "Igbo":            { fr: "Igbo",             en: "Igbo",        pt: "Igbo",         ar: "الإيغبو",     es: "Igbo",       sw: "Kiigbo" },
+  "Twi":             { fr: "Twi",              en: "Twi",         pt: "Twi",          ar: "التوي",       es: "Twi",        sw: "Twi" },
+  "Moore":           { fr: "Mooré",            en: "Mooré",       pt: "Mooré",        ar: "الموري",      es: "Mooré",      sw: "Mooré" },
+  "Soninké":         { fr: "Soninké",          en: "Soninke",     pt: "Soninqué",     ar: "السوننكي",    es: "Soninké",    sw: "Soninke" },
+  "Mandingue":       { fr: "Mandingue",        en: "Mandinka",    pt: "Mandinga",     ar: "الماندينغ",   es: "Mandinga",   sw: "Kimandinka" },
+};
+
+function getLangLabel(key: string, currentLang: string): string {
+  return LANGUAGE_LABELS[key]?.[currentLang] || LANGUAGE_LABELS[key]?.["fr"] || key;
+}
 
 function PersonalForm({ p, t, onSave, onClose }: any) {
   const { lang } = useLang();
@@ -1412,12 +1455,7 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
     ];
     setSaving(true);
     try {
-      await onSave({
-        ...f,
-        nationality: codeToFrName(f.nationality, countries),
-        residence_country: codeToFrName(f.residence_country, countries),
-        languages_spoken: allLangs,
-      });
+      await onSave({ ...f, languages_spoken: allLangs });
       onClose();
     } finally {
       setSaving(false);
@@ -1430,7 +1468,7 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
   ];
 
   return (
-    <Card className="p-6 border-border/50 bg-gradient-card space-y-6">
+    <Card className="p-4 sm:p-6 border-border/50 bg-gradient-card space-y-6">
       <h3 className="font-semibold flex items-center gap-2"><User className="h-4 w-4 text-primary" />{t("prof_personal_info")}</h3>
 
       {/* Avatar */}
@@ -1467,7 +1505,7 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
       {/* Identité */}
       <div className="space-y-3">
         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><User className="h-3.5 w-3.5" />{t("prof_section_identity")}</div>
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label={t("prof_preferred_name")}>
             <Input
               value={f.preferred_name}
@@ -1502,7 +1540,7 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
       {/* Localisation */}
       <div className="space-y-3">
         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{t("prof_section_location")}</div>
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label={t("prof_residence_country")}>
             <Select value={f.residence_country || "null"} onValueChange={(v) => handleResidenceCountryChange(v === "null" ? "" : v)}>
               <SelectTrigger><SelectValue placeholder={t("prof_select_country")} /></SelectTrigger>
@@ -1539,7 +1577,7 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
       {/* Contact & Langue */}
       <div className="space-y-3">
         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" />{t("prof_section_contact")}</div>
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
             <Field label={t("prof_email")}>
               <div className="relative">
@@ -1575,16 +1613,16 @@ function PersonalForm({ p, t, onSave, onClose }: any) {
       {/* Langues parlées — checkboxes */}
       <div className="space-y-3">
         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><Languages className="h-3.5 w-3.5" />{t("prof_languages")}</div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {COMMON_LANGUAGES.map((lang) => (
-            <label key={lang} className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg border cursor-pointer transition-colors select-none ${checkedLangs.includes(lang) ? "border-primary/50 bg-primary/5 text-primary" : "border-border/40 bg-muted/30 hover:border-border"}`}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+          {COMMON_LANGUAGES.map((lkey) => (
+            <label key={lkey} className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg border cursor-pointer transition-colors select-none ${checkedLangs.includes(lkey) ? "border-primary/50 bg-primary/5 text-primary" : "border-border/40 bg-muted/30 hover:border-border"}`}>
               <input
                 type="checkbox"
                 className="accent-primary"
-                checked={checkedLangs.includes(lang)}
-                onChange={() => toggleLang(lang)}
+                checked={checkedLangs.includes(lkey)}
+                onChange={() => toggleLang(lkey)}
               />
-              {lang}
+              {getLangLabel(lkey, lang)}
             </label>
           ))}
           <label className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg border cursor-pointer transition-colors select-none ${showOtherLang ? "border-primary/50 bg-primary/5 text-primary" : "border-border/40 bg-muted/30 hover:border-border"}`}>
@@ -1654,7 +1692,7 @@ function Field({ label, children }: any) {
 function EducationSection({ items, t, userId, reload }: any) {
   const { lang } = useLang();
   return (
-    <Card className="p-6 border-border/50">
+    <Card className="p-4 sm:p-6 border-border/50">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold flex items-center gap-2"><GraduationCap className="h-4 w-4" />{t("prof_tab_education")}</h3>
         <EduDialog userId={userId} t={t} reload={reload} />
@@ -1670,7 +1708,7 @@ function EducationSection({ items, t, userId, reload }: any) {
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold truncate">{e.field || "—"}</div>
                   <div className="text-sm text-muted-foreground">{e.degree && <span className="mr-1">{getDegreeLabelByLang(e.degree, lang)} ·</span>}{e.institution}{e.country ? `, ${e.country}` : ""}</div>
-                  <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><Calendar className="h-3 w-3" />{fmtDate(e.startDate)} → {e.currentlyStudying ? t("prof_now") : fmtDate(e.endDate)}</div>
+                  <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><Calendar className="h-3 w-3" />{fmtDate(e.startDate, lang)} → {e.currentlyStudying ? t("prof_now") : fmtDate(e.endDate, lang)}</div>
                   {e.description && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{e.description}</p>}
                 </div>
               </div>
@@ -1735,8 +1773,8 @@ function EduDialog({ userId, t, reload }: any) {
           <DialogTitle className="flex items-center gap-2"><GraduationCap className="h-5 w-5 text-primary" />{t("prof_tab_education")}</DialogTitle>
           <DialogDescription>Ajouter une nouvelle formation</DialogDescription>
         </DialogHeader>
-        <div className="overflow-y-auto max-h-[55vh] space-y-4 pr-1">
-          <div className="grid sm:grid-cols-2 gap-3">
+        <div className="overflow-y-auto max-h-[60dvh] space-y-4 pr-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label={t("prof_edu_degree")}>
               <Select value={f.degree || "null"} onValueChange={(v) => setF({ ...f, degree: v === "null" ? "" : v })}>
                 <SelectTrigger><SelectValue placeholder={t("prof_select_degree")} /></SelectTrigger>
@@ -1815,8 +1853,8 @@ function EditEduDialog({ education, userId, t, reload }: any) {
           <DialogTitle className="flex items-center gap-2"><GraduationCap className="h-5 w-5 text-primary" />{t("prof_edit")} {t("prof_tab_education")}</DialogTitle>
           <DialogDescription>Modifier une formation</DialogDescription>
         </DialogHeader>
-        <div className="overflow-y-auto max-h-[55vh] space-y-4 pr-1">
-          <div className="grid sm:grid-cols-2 gap-3">
+        <div className="overflow-y-auto max-h-[60dvh] space-y-4 pr-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label={t("prof_edu_degree")}>
               <Select value={f.degree || "null"} onValueChange={(v) => setF({ ...f, degree: v === "null" ? "" : v })}>
                 <SelectTrigger><SelectValue placeholder={t("prof_select_degree")} /></SelectTrigger>
@@ -1848,6 +1886,7 @@ function EditEduDialog({ education, userId, t, reload }: any) {
 
 /* CERTIFICATIONS */
 function CertificationsSection({ items, t, userId, reload }: any) {
+  const { lang } = useLang();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [f, setF] = useState<Cert>({ name: "" });
@@ -1872,12 +1911,12 @@ function CertificationsSection({ items, t, userId, reload }: any) {
     }
   };
   return (
-    <Card className="p-6 border-border/50">
+    <Card className="p-4 sm:p-6 border-border/50">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold flex items-center gap-2"><Award className="h-4 w-4 text-primary" />{t("prof_cert_section")}</h3>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button size="sm" className="bg-gradient-hero border-0 shadow-glow"><Plus className="h-4 w-4 mr-1" />{t("prof_add")}</Button></DialogTrigger>
-          <DialogContent className="sm:max-w-md flex flex-col">
+          <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md flex flex-col">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2"><Award className="h-5 w-5 text-primary" />{t("prof_cert_section")}</DialogTitle>
               <DialogDescription>Ajouter une certification</DialogDescription>
@@ -1909,7 +1948,7 @@ function CertificationsSection({ items, t, userId, reload }: any) {
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold truncate">{c.name}</div>
                   <div className="text-sm text-muted-foreground">{c.issuer}</div>
-                  {(c.issueDate ?? c.issue_date) && <Badge variant="outline" className="text-[10px] mt-1 px-1.5 py-0">{fmtDate(c.issueDate ?? c.issue_date)}</Badge>}
+                  {(c.issueDate ?? c.issue_date) && <Badge variant="outline" className="text-[10px] mt-1 px-1.5 py-0">{fmtDate(c.issueDate ?? c.issue_date, lang)}</Badge>}
                 </div>
               </div>
               <div className="flex gap-1 shrink-0">
@@ -1987,6 +2026,7 @@ function EditCertificationDialog({ certification, userId, t, reload }: any) {
 
 /* EXPERIENCE */
 function ExperienceSection({ items, t, userId, reload }: any) {
+  const { lang } = useLang();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [f, setF] = useState<Exp>({ role: "", kind: "job", isCurrent: false });
@@ -2044,18 +2084,18 @@ function ExperienceSection({ items, t, userId, reload }: any) {
     }
   };
   return (
-    <Card className="p-6 border-border/50">
+    <Card className="p-4 sm:p-6 border-border/50">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold flex items-center gap-2"><Briefcase className="h-4 w-4 text-primary" />{t("prof_tab_experience")}</h3>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button size="sm" className="bg-gradient-hero border-0 shadow-glow"><Plus className="h-4 w-4 mr-1" />{t("prof_add")}</Button></DialogTrigger>
-          <DialogContent className="sm:max-w-lg flex flex-col">
+          <DialogContent className="w-[calc(100%-2rem)] sm:max-w-lg flex flex-col">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2"><Briefcase className="h-5 w-5 text-primary" />{t("prof_tab_experience")}</DialogTitle>
               <DialogDescription>Ajouter une expérience professionnelle</DialogDescription>
             </DialogHeader>
-            <div className="overflow-y-auto max-h-[55vh] space-y-4 pr-1">
-              <div className="grid sm:grid-cols-2 gap-3">
+            <div className="overflow-y-auto max-h-[60dvh] space-y-4 pr-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label={<span>{t("prof_exp_role")} <span className="text-red-500">*</span></span>}><Input value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })} placeholder="Ex: Développeur senior" /></Field>
                 <Field label={t("prof_exp_org")}><Input value={f.organization ?? ""} onChange={(e) => setF({ ...f, organization: e.target.value })} placeholder="Organisation ou entreprise" /></Field>
                 <Field label={t("prof_exp_sector")}><Input value={f.sector ?? ""} onChange={(e) => setF({ ...f, sector: e.target.value })} placeholder="Ex: Tech, Finance..." /></Field>
@@ -2098,7 +2138,7 @@ function ExperienceSection({ items, t, userId, reload }: any) {
                   </div>
                   <Badge variant="secondary" className="text-[10px] shrink-0">{kindLabel(e.kind ?? "job")}</Badge>
                 </div>
-                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><Calendar className="h-3 w-3" />{fmtDate(e.startDate)} → {e.isCurrent ? t("prof_now") : fmtDate(e.endDate)}</div>
+                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><Calendar className="h-3 w-3" />{fmtDate(e.startDate, lang)} → {e.isCurrent ? t("prof_now") : fmtDate(e.endDate, lang)}</div>
                 {e.description && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{e.description}</p>}
                 {e.impact && <p className="text-xs text-accent mt-1 flex items-center gap-1"><Sparkles className="h-3 w-3" />{e.impact}</p>}
               </div>
@@ -2209,8 +2249,8 @@ function EditExperienceDialog({ experience, userId, t, reload }: any) {
           <DialogTitle className="flex items-center gap-2"><Briefcase className="h-5 w-5 text-primary" />{t("prof_edit")} {t("prof_tab_experience")}</DialogTitle>
           <DialogDescription>Modifier une expérience</DialogDescription>
         </DialogHeader>
-        <div className="overflow-y-auto max-h-[55vh] space-y-4 pr-1">
-          <div className="grid sm:grid-cols-2 gap-3">
+        <div className="overflow-y-auto max-h-[60dvh] space-y-4 pr-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label={<span>{t("prof_exp_role")} <span className="text-red-500">*</span></span>}><Input value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })} placeholder="Ex: Développeur senior" /></Field>
             <Field label={t("prof_exp_org")}><Input value={f.organization ?? ""} onChange={(e) => setF({ ...f, organization: e.target.value })} placeholder="Organisation ou entreprise" /></Field>
             <Field label={t("prof_exp_sector")}><Input value={f.sector ?? ""} onChange={(e) => setF({ ...f, sector: e.target.value })} placeholder="Ex: Tech, Finance..." /></Field>
@@ -2267,12 +2307,12 @@ function SkillsSection({ items, t, userId, reload }: any) {
     }
   };
   return (
-    <Card className="p-6 border-border/50">
+    <Card className="p-4 sm:p-6 border-border/50">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" />{t("prof_tab_skills")}</h3>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button size="sm" className="bg-gradient-hero border-0 shadow-glow"><Plus className="h-4 w-4 mr-1" />{t("prof_add")}</Button></DialogTrigger>
-          <DialogContent className="sm:max-w-md flex flex-col">
+          <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md flex flex-col">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" />{t("prof_tab_skills")}</DialogTitle>
               <DialogDescription>Ajouter une compétence</DialogDescription>
@@ -2526,7 +2566,7 @@ function AspirationsForm({ p, t, onSave, onClose }: any) {
     }
   };
   return (
-    <Card className="p-6 border-border/50 bg-gradient-card space-y-6">
+    <Card className="p-4 sm:p-6 border-border/50 bg-gradient-card space-y-6">
       <h3 className="font-semibold flex items-center gap-2"><Target className="h-4 w-4 text-primary" />{t("prof_tab_aspirations")}</h3>
 
       <div className="space-y-3">
@@ -2615,12 +2655,12 @@ function SocialLinksForm({ p, t, lang, onSave, onClose }: any) {
     }
   };
   return (
-    <Card className="p-6 border-border/50 bg-gradient-card space-y-5">
+    <Card className="p-4 sm:p-6 border-border/50 bg-gradient-card space-y-5">
       <h3 className="font-semibold flex items-center gap-2"><Globe className="h-4 w-4 text-primary" />{t("prof_port_links")}</h3>
 
       <div className="space-y-3">
         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("prof_section_social")}</div>
-        <div className="grid sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label={t("prof_port_linkedin")}>
             <div className="relative flex items-center">
               <Linkedin className="absolute left-3 h-4 w-4 text-muted-foreground" />
@@ -2650,7 +2690,7 @@ function SocialLinksForm({ p, t, lang, onSave, onClose }: any) {
 
       <div className="space-y-3">
         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("prof_section_media")}</div>
-        <div className="grid sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label={t("prof_port_video")}>
             <div className="relative flex items-center">
               <Link2 className="absolute left-3 h-4 w-4 text-muted-foreground" />
@@ -2717,12 +2757,12 @@ function PortfolioSection({ items, t, userId, reload }: any) {
     }
   };
   return (
-    <Card className="p-6 border-border/50">
+    <Card className="p-4 sm:p-6 border-border/50">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold flex items-center gap-2"><Layers className="h-4 w-4 text-primary" />{t("prof_port_projects")}</h3>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button size="sm" className="bg-gradient-hero border-0 shadow-glow"><Plus className="h-4 w-4 mr-1" />{t("prof_add")}</Button></DialogTrigger>
-          <DialogContent className="sm:max-w-md flex flex-col">
+          <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md flex flex-col">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2"><Layers className="h-5 w-5 text-primary" />{t("prof_port_projects")}</DialogTitle>
             </DialogHeader>

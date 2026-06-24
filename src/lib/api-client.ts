@@ -46,8 +46,13 @@ export async function apiCall<T = any>(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: response.statusText }));
-    throw new Error(error.message || `API Error: ${response.status}`);
+    const errorBody = await response.json().catch(() => ({ message: response.statusText }));
+    const message =
+      errorBody.message ||
+      errorBody.error ||
+      (Array.isArray(errorBody.errors) && errorBody.errors[0]?.msg) ||
+      `Erreur ${response.status}`;
+    throw new Error(message);
   }
 
   return response.json();
@@ -589,9 +594,9 @@ export const authExtrasAPI = {
       `/api/auth/verify-email?token=${encodeURIComponent(token)}`
     ),
   changePassword: (data: { newPassword: string; currentPassword?: string }) =>
-    apiCall("/api/auth/change-password", { method: "POST", body: JSON.stringify(data) }),
+    apiCall<{ success: boolean; message?: string; token?: string }>("/api/auth/change-password", { method: "POST", body: JSON.stringify(data) }),
   completeProfileFlag: (data: { firstName?: string; lastName?: string }) =>
-    apiCall("/api/auth/complete-profile-flag", { method: "PATCH", body: JSON.stringify(data) }),
+    apiCall<{ success: boolean; token?: string }>("/api/auth/complete-profile-flag", { method: "PATCH", body: JSON.stringify(data) }),
 };
 
 /**

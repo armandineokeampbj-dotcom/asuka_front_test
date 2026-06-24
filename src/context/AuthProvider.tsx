@@ -62,8 +62,10 @@ function mergeAdminFields(userData: User, token: string): User {
     permissions: payload.permissions ?? null,
     parentAdminId: payload.parentAdminId ?? null,
     adminProfileId: payload.adminProfileId ?? null,
-    mustChangePassword: payload.mustChangePassword ?? userData.mustChangePassword ?? false,
-    mustCompleteProfile: payload.mustCompleteProfile ?? userData.mustCompleteProfile ?? false,
+    // userData (source DB / réponse API fraîche) prend la priorité sur le JWT pour les flags first-login.
+    // Le JWT peut être un vieux token dont les flags ont déjà été effacés en base.
+    mustChangePassword: userData.mustChangePassword ?? payload.mustChangePassword ?? false,
+    mustCompleteProfile: userData.mustCompleteProfile ?? payload.mustCompleteProfile ?? false,
   };
 }
 

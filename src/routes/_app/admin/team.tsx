@@ -65,6 +65,7 @@ function AdminTeamPage() {
     if (!adminBForm.email) return toast.error(t("admin_team_err_email"));
     if (editTarget && (!adminBForm.firstName || !adminBForm.lastName)) return toast.error(t("admin_team_err_name"));
     if (!editTarget && !adminBForm.password) return toast.error(t("admin_team_err_pw"));
+    if (!editTarget && adminBForm.password.length < 12) return toast.error("Le mot de passe doit contenir au moins 12 caractères");
     setSaving(true);
     try {
       if (editTarget) {
@@ -102,6 +103,8 @@ function AdminTeamPage() {
     if (!collabForm.email) return toast.error(t("admin_team_err_email"));
     if (editTarget && (!collabForm.firstName || !collabForm.lastName)) return toast.error(t("admin_team_err_name"));
     if (!editTarget && !collabForm.password) return toast.error(t("admin_team_err_pw"));
+    if (!editTarget && collabForm.password.length < 12) return toast.error("Le mot de passe doit contenir au moins 12 caractères");
+    if (!editTarget && isSuperAdmin && !collabForm.parentAdminId) return toast.error("Veuillez sélectionner un Admin B responsable");
     setSaving(true);
     try {
       if (editTarget) {
@@ -370,16 +373,22 @@ function AdminTeamPage() {
             {isSuperAdmin && !editTarget && (
               <div>
                 <label className="text-xs text-muted-foreground font-medium block mb-1.5">{t("admin_team_responsible")}</label>
-                <select
-                  className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-                  value={collabForm.parentAdminId}
-                  onChange={(e) => setCollabForm({ ...collabForm, parentAdminId: e.target.value })}
-                >
-                  <option value="">{t("admin_team_select_admin")}</option>
-                  {adminsB.map((a) => (
-                    <option key={a._id} value={a._id}>{a.firstName} {a.lastName}</option>
-                  ))}
-                </select>
+                {adminsB.length === 0 ? (
+                  <p className="text-xs text-destructive">Aucun Admin B disponible. Créez d'abord un Admin B avant d'ajouter un collaborateur.</p>
+                ) : (
+                  <select
+                    className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                    value={collabForm.parentAdminId}
+                    onChange={(e) => setCollabForm({ ...collabForm, parentAdminId: e.target.value })}
+                  >
+                    <option value="">{t("admin_team_select_admin")}</option>
+                    {adminsB.map((a) => (
+                      <option key={a._id} value={a._id}>
+                        {(a.firstName || a.lastName) ? `${a.firstName} ${a.lastName}`.trim() : a.email}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             )}
           </div>

@@ -62,11 +62,11 @@ function getLangName(code: string, visitorLang: string): string {
   return LANG_NAMES[code]?.[visitorLang] || LANG_NAMES[code]?.["en"] || code;
 }
 
-function fmtDate(d: string | null): string {
+function fmtDate(d: string | null, lang?: string): string {
   if (!d) return "";
   const date = new Date(d);
   if (isNaN(date.getTime())) return "";
-  return date.toLocaleDateString(undefined, { month: "short", year: "numeric" });
+  return date.toLocaleDateString(lang || undefined, { month: "short", year: "numeric" });
 }
 
 function LevelBar({ level }: { level: number }) {
@@ -313,7 +313,7 @@ function PublicProfilePage() {
                           <div className="font-medium">{x.title}</div>
                           <div className="text-sm text-muted-foreground">{x.company}{x.location ? ` · ${x.location}` : ""}</div>
                           <div className="text-xs text-muted-foreground mt-0.5">
-                            {fmtDate(x.startDate)} → {x.currentlyWorking ? t("pub_currently") : fmtDate(x.endDate)}
+                            {fmtDate(x.startDate, lang)} → {x.currentlyWorking ? t("pub_currently") : fmtDate(x.endDate, lang)}
                           </div>
                           {x.description && <p className="text-sm mt-1 text-muted-foreground line-clamp-3">{x.description}</p>}
                         </div>
@@ -334,7 +334,7 @@ function PublicProfilePage() {
                           <div className="font-medium">{e.field || e.degree}</div>
                           <div className="text-sm text-muted-foreground">{e.degree}{e.school ? ` · ${e.school}` : ""}</div>
                           <div className="text-xs text-muted-foreground mt-0.5">
-                            {fmtDate(e.startDate)} → {e.currentlyStudying ? t("pub_currently") : fmtDate(e.endDate)}
+                            {fmtDate(e.startDate, lang)} → {e.currentlyStudying ? t("pub_currently") : fmtDate(e.endDate, lang)}
                           </div>
                         </div>
                       ))}
@@ -355,7 +355,7 @@ function PublicProfilePage() {
                             <div className="text-sm font-medium">{c.title}</div>
                             <div className="text-xs text-muted-foreground">{c.issuer}</div>
                           </div>
-                          {c.issueDate && <span className="text-xs text-muted-foreground shrink-0">{fmtDate(c.issueDate)}</span>}
+                          {c.issueDate && <span className="text-xs text-muted-foreground shrink-0">{fmtDate(c.issueDate, lang)}</span>}
                         </div>
                       ))}
                     </div>
