@@ -42,6 +42,11 @@ function LoginAdminPage() {
         return;
       }
 
+      if (user.mustAcceptTerms) {
+        navigate({ to: "/admin/first-login/accept-terms" });
+        return;
+      }
+
       navigate({ to: "/admin/dashboard" });
     } catch (err) {
       setError(err instanceof Error ? err.message : t("admin_login_failed"));

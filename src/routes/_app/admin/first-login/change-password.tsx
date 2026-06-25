@@ -124,8 +124,9 @@ function ChangePasswordPage() {
       <div className="flex items-center gap-2 justify-center">
         <div className="h-2 w-8 rounded-full bg-primary" />
         <div className="h-2 w-8 rounded-full bg-muted" />
+        <div className="h-2 w-8 rounded-full bg-muted" />
       </div>
-      <p className="text-center text-xs text-muted-foreground">{t("admin_fl_step1")}</p>
+      <p className="text-center text-xs text-muted-foreground">{t("admin_fl_step1") || "Étape 1 sur 3"}</p>
     </div>
   );
 }

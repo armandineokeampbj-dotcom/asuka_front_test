@@ -68,6 +68,12 @@ function AdminLayout() {
       }
       return;
     }
+    if (user.mustAcceptTerms) {
+      if (!loc.pathname.startsWith("/admin/first-login/accept-terms")) {
+        navigate({ to: "/admin/first-login/accept-terms" });
+      }
+      return;
+    }
   }, [loading, user, hasAnyAdminRole, loc.pathname, navigate]);
 
   if (loading) {

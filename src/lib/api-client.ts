@@ -597,6 +597,8 @@ export const authExtrasAPI = {
     apiCall<{ success: boolean; message?: string; token?: string }>("/api/auth/change-password", { method: "POST", body: JSON.stringify(data) }),
   completeProfileFlag: (data: { firstName?: string; lastName?: string }) =>
     apiCall<{ success: boolean; token?: string }>("/api/auth/complete-profile-flag", { method: "PATCH", body: JSON.stringify(data) }),
+  acceptTerms: () =>
+    apiCall<{ success: boolean; token?: string }>("/api/auth/accept-terms", { method: "POST" }),
 };
 
 /**

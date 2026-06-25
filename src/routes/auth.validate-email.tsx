@@ -35,6 +35,12 @@ function ValidateEmailPage() {
   const [resendDone, setResendDone] = useState(false);
 
   useEffect(() => {
+    // Nettoyer toute session existante pour éviter la pollution de token
+    // (ex : super_admin qui teste la vérification depuis son propre navigateur)
+    if (role === "admin") {
+      localStorage.removeItem("asuka_token");
+      localStorage.removeItem("asuka_user");
+    }
     validateEmail();
   }, []);
 
@@ -63,19 +69,28 @@ function ValidateEmailPage() {
         return;
       }
 
-      if (data.token && data.user) {
-        setAuthData(data.token, data.user);
+      if (data.success) {
         const successMsg = data.message || t("auth_email_verified") || "Email vérifié avec succès";
         setMessage(successMsg);
         toast.success(successMsg);
+        setValidating(false);
+
+        // Utilisateurs normaux : connexion automatique
+        if (data.token && data.user && !data.isAdmin && role !== "admin") {
+          setAuthData(data.token, data.user);
+        }
 
         setTimeout(() => {
           if (data.isAdmin || role === "admin") {
-            nav({ to: "/admin/dashboard" as any });
+            // Admins : redirection vers la page de connexion pour s'authentifier proprement
+            nav({ to: "/login-admin" });
           } else {
             nav({ to: "/dashboard" });
           }
-        }, 2000);
+        }, 2500);
+      } else {
+        setError(t("auth_validation_failed") || "Validation échouée");
+        setValidating(false);
       }
     } catch (err: any) {
       setError(err.message || t("auth_validation_failed") || "Validation échouée");
@@ -181,8 +196,8 @@ function ValidateEmailPage() {
             <p className="text-sm text-muted-foreground">{message}</p>
             <p className="text-xs text-muted-foreground">
               {role === "admin"
-                ? t("auth_admin_redirecting")
-                : t("auth_redirecting") || "Redirection vers le tableau de bord..."}
+                ? (t("auth_admin_redirecting_login") || "Redirection vers la page de connexion...")
+                : (t("auth_redirecting") || "Redirection vers le tableau de bord...")}
             </p>
           </div>
         )}

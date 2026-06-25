@@ -18,6 +18,7 @@ export interface User {
   // First-login flags
   mustChangePassword?: boolean;
   mustCompleteProfile?: boolean;
+  mustAcceptTerms?: boolean;
   // Dual-space flag
   hasUserProfile?: boolean;
 }
@@ -66,6 +67,7 @@ function mergeAdminFields(userData: User, token: string): User {
     // Le JWT peut être un vieux token dont les flags ont déjà été effacés en base.
     mustChangePassword: userData.mustChangePassword ?? payload.mustChangePassword ?? false,
     mustCompleteProfile: userData.mustCompleteProfile ?? payload.mustCompleteProfile ?? false,
+    mustAcceptTerms: userData.mustAcceptTerms ?? payload.mustAcceptTerms ?? false,
   };
 }
 
